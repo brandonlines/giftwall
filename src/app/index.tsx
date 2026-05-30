@@ -1,98 +1,210 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCallback, useState } from "react";
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { Link, Stack, useFocusEffect, useRouter } from "expo-router";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Screen } from "@/components/ui/screen";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/components/ui/toast";
+import { groupsRepo } from "@/data/repositories/groups";
+import { pendingInvite } from "@/lib/pending-invite";
+import { useTheme, useThemedStyles } from "@/theme/provider";
+import type { ThemeColors } from "@/theme/themes";
+import type { Group } from "@/types/database";
+import { t } from "@/i18n";
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+export default function GroupsScreen() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const showToast = useToast();
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [name, setName] = useState("");
+  const [joinId, setJoinId] = useState("");
+  const [busy, setBusy] = useState(false);
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
+  const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      setGroups(await groupsRepo.listMine());
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't load groups", "error");
+    } finally {
+      setRefreshing(false);
+      setLoaded(true);
+    }
+  }, [showToast]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void (async () => {
+        // Finish a join that was started from a link before sign-in.
+        const code = await pendingInvite.get();
+        if (code) {
+          await pendingInvite.clear();
+          try {
+            const groupId = await groupsRepo.joinByCode(code);
+            await load();
+            router.push(`/group/${groupId}`);
+            return;
+          } catch {
+            // invalid/expired code — fall through to a normal load
+          }
+        }
+        await load();
+      })();
+    }, [load, router]),
+  );
+
+  async function createGroup() {
+    if (!name.trim()) return;
+    setBusy(true);
+    try {
+      const g = await groupsRepo.create(name.trim());
+      setName("");
+      router.push(`/group/${g.id}`);
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't create group", "error");
+    } finally {
+      setBusy(false);
+    }
   }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
+
+  async function joinGroup() {
+    if (!joinId.trim()) return;
+    setBusy(true);
+    try {
+      const groupId = await groupsRepo.joinByCode(joinId.trim());
+      setJoinId("");
+      await load();
+      router.push(`/group/${groupId}`);
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't join group", "error");
+    } finally {
+      setBusy(false);
+    }
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
+    <Screen>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Link href="/profile" asChild>
+              <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel={t("common.profile")}>
+                <Text style={styles.headerLink}>{t("common.profile")}</Text>
+              </Pressable>
+            </Link>
+          ),
+        }}
+      />
+      <FlatList
+        data={groups}
+        keyExtractor={(g) => g.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={load}
+            tintColor={colors.primary}
+          />
+        }
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          !loaded ? (
+            <View style={styles.skeletons}>
+              {[0, 1, 2].map((k) => (
+                <Skeleton key={k} height={56} radius={12} />
+              ))}
+            </View>
+          ) : (
+            <EmptyState
+              emoji="🎁"
+              title="No groups yet"
+              hint={t("groups.empty")}
+            />
+          )
+        }
+        renderItem={({ item }) => (
+          <Card style={styles.row} onPress={() => router.push(`/group/${item.id}`)}>
+            <Text style={styles.rowTitle}>{item.name}</Text>
+            <Text style={styles.rowChevron}>›</Text>
+          </Card>
+        )}
+        ListFooterComponent={
+          <View style={styles.footer}>
+            <Text style={styles.sectionLabel}>{t("groups.createSection")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("groups.namePlaceholder")}
+              placeholderTextColor={colors.placeholder}
+              value={name}
+              onChangeText={setName}
+            />
+            <Button title={t("groups.create")} onPress={createGroup} loading={busy} />
+
+            <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
+              {t("groups.joinSection")}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("groups.joinPlaceholder")}
+              placeholderTextColor={colors.placeholder}
+              autoCapitalize="characters"
+              value={joinId}
+              onChangeText={setJoinId}
+            />
+            <Button
+              title={t("groups.join")}
+              variant="secondary"
+              onPress={joinGroup}
+              loading={busy}
+            />
+          </View>
+        }
+      />
+    </Screen>
   );
 }
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    listContent: { padding: 16, gap: 8 },
+    skeletons: { gap: 8 },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+    },
+    rowTitle: { flex: 1, fontSize: 17, fontWeight: "600", color: c.text },
+    rowChevron: { fontSize: 24, color: c.textMuted },
+    footer: { marginTop: 24 },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: c.pageTextMuted,
+      marginBottom: 8,
+      textTransform: "uppercase",
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      marginBottom: 10,
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
+    headerLink: { color: c.accent, fontSize: 16 },
+  });

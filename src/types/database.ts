@@ -1,0 +1,161 @@
+// Hand-authored to match supabase/migrations/0001_init.sql.
+// Once your Supabase project is live, regenerate with:
+//   npx supabase gen types typescript --project-id <ref> > src/types/database.ts
+
+export type ClaimStatus = "claimed" | "purchased";
+export type MemberRole = "admin" | "member";
+export type ActivityType = "member_joined" | "list_created" | "item_added";
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: { id: string; display_name: string | null; avatar_url: string | null; created_at: string };
+        Insert: { id: string; display_name?: string | null; avatar_url?: string | null };
+        Update: { display_name?: string | null; avatar_url?: string | null };
+        Relationships: [];
+      };
+      groups: {
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; created_at: string };
+        Insert: { id?: string; name: string; created_by: string };
+        Update: { name?: string };
+        Relationships: [];
+      };
+      memberships: {
+        Row: { group_id: string; user_id: string; role: MemberRole; created_at: string };
+        Insert: { group_id: string; user_id: string; role?: MemberRole };
+        Update: { role?: MemberRole };
+        Relationships: [];
+      };
+      wishlists: {
+        Row: { id: string; group_id: string; owner_id: string; title: string; created_at: string };
+        Insert: { id?: string; group_id: string; owner_id: string; title: string };
+        Update: { title?: string };
+        Relationships: [];
+      };
+      items: {
+        Row: {
+          id: string;
+          list_id: string;
+          title: string;
+          url: string | null;
+          image_url: string | null;
+          price_cents: number | null;
+          currency: string | null;
+          note: string | null;
+          quantity: number;
+          is_priority: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          list_id: string;
+          title: string;
+          url?: string | null;
+          image_url?: string | null;
+          price_cents?: number | null;
+          currency?: string | null;
+          note?: string | null;
+          quantity?: number;
+          is_priority?: boolean;
+        };
+        Update: {
+          title?: string;
+          url?: string | null;
+          image_url?: string | null;
+          price_cents?: number | null;
+          currency?: string | null;
+          note?: string | null;
+          quantity?: number;
+          is_priority?: boolean;
+        };
+        Relationships: [];
+      };
+      claims: {
+        Row: {
+          id: string;
+          item_id: string;
+          buyer_id: string;
+          status: ClaimStatus;
+          created_at: string;
+        };
+        Insert: { id?: string; item_id: string; buyer_id: string; status?: ClaimStatus };
+        Update: { status?: ClaimStatus };
+        Relationships: [];
+      };
+      push_tokens: {
+        Row: { token: string; user_id: string; platform: string | null; updated_at: string };
+        Insert: { token: string; user_id: string; platform?: string | null };
+        Update: { platform?: string | null };
+        Relationships: [];
+      };
+      item_comments: {
+        Row: {
+          id: string;
+          item_id: string;
+          author_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: { id?: string; item_id: string; author_id: string; body: string };
+        Update: { body?: string };
+        Relationships: [];
+      };
+      activity: {
+        Row: {
+          id: string;
+          group_id: string;
+          actor_id: string | null;
+          type: ActivityType;
+          list_id: string | null;
+          list_title: string | null;
+          item_title: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          actor_id?: string | null;
+          type: ActivityType;
+          list_id?: string | null;
+          list_title?: string | null;
+          item_title?: string | null;
+        };
+        Update: { list_title?: string | null; item_title?: string | null };
+        Relationships: [];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: {
+      create_group: {
+        Args: { p_name: string };
+        Returns: {
+          id: string;
+          name: string;
+          created_by: string | null;
+          invite_code: string;
+          created_at: string;
+        };
+      };
+      redeem_invite: { Args: { p_code: string }; Returns: string };
+      rotate_invite_code: { Args: { p_group_id: string }; Returns: string };
+    };
+    Enums: {
+      claim_status: ClaimStatus;
+      member_role: MemberRole;
+      activity_type: ActivityType;
+    };
+  };
+}
+
+// Convenience row aliases for app code.
+type T = Database["public"]["Tables"];
+export type Profile = T["profiles"]["Row"];
+export type Group = T["groups"]["Row"];
+export type Membership = T["memberships"]["Row"];
+export type Wishlist = T["wishlists"]["Row"];
+export type Item = T["items"]["Row"];
+export type Claim = T["claims"]["Row"];
+export type PushToken = T["push_tokens"]["Row"];
+export type Activity = T["activity"]["Row"];
+export type ItemComment = T["item_comments"]["Row"];

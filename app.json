@@ -8,7 +8,9 @@
     "scheme": "giftwall",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.giftwall.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,14 +19,23 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.giftwall.app"
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "giftwall needs access to your photos so you can set a profile picture."
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -34,7 +45,9 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-sharing",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,

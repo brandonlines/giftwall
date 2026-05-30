@@ -1,0 +1,54 @@
+project_id = "giftwall"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+
+[studio]
+enabled = true
+port = 54323
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+# Deep link the app uses; OAuth/magic-link redirects must be allow-listed here.
+site_url = "giftwall://"
+additional_redirect_urls = ["giftwall://auth-callback"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Local dev: skip the confirmation email so OTP works against Inbucket (port 54324).
+enable_confirmations = false
+
+# OAuth providers are configured in the hosted dashboard for real builds.
+# For local testing of Apple/Google you'd add [auth.external.apple]/.google
+# blocks with client ids + secrets; email OTP works locally without them.
+
+[functions.scrape-link]
+verify_jwt = true
+
+[functions.send-push]
+# Invoked by a Database Webhook, not an end-user session.
+verify_jwt = false
+
+[functions.delete-account]
+# Authenticated users only — the caller is identified from their JWT.
+verify_jwt = true

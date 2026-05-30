@@ -1,0 +1,11 @@
+-- Seed data for local development (`supabase db reset` runs this after migrations).
+--
+-- Seeding requires auth users to exist first. The simplest local flow is:
+--   1. `supabase start`
+--   2. Sign in through the app with two different emails (OTP lands in
+--      Inbucket at http://localhost:54324).
+--   3. Create a group + wishlist from one account, claim from the other.
+--
+-- If you want deterministic seed data instead, insert into auth.users here with
+-- fixed UUIDs and then reference them below. Left empty by default so resets
+-- stay fast and don't fight the auth schema.
