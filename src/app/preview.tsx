@@ -59,6 +59,9 @@ export default function PreviewScreen() {
         </Card>
 
         <Text style={styles.section}>Wishlist items</Text>
+        <View style={styles.searchSample}>
+          <Text style={styles.searchPlaceholder}>🔎  Search this list…</Text>
+        </View>
         <Card style={styles.item}>
           <View style={styles.thumb}>
             <Text style={styles.thumbText}>🎁</Text>
@@ -123,6 +126,22 @@ export default function PreviewScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.activityText}>{a.text}</Text>
               <Text style={styles.activityTime}>{a.time}</Text>
+            </View>
+          </Card>
+        ))}
+
+        <Text style={styles.section}>My shopping list</Text>
+        {[
+          { title: "Wireless Headphones", price: "$129.00", bought: false },
+          { title: "Wool Socks", price: "$24.00", bought: true },
+        ].map((s, i) => (
+          <Card key={i} style={styles.shopRow}>
+            <View style={[styles.shopBox, s.bought && styles.shopBoxOn]}>
+              {s.bought && <Text style={styles.shopCheck}>✓</Text>}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.shopTitle, s.bought && styles.shopTitleDone]}>{s.title}</Text>
+              <Text style={styles.shopPrice}>{s.price}</Text>
             </View>
           </Card>
         ))}
@@ -203,6 +222,16 @@ const makeStyles = (c: ThemeColors) =>
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
     claimBtn: { marginTop: 4, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, alignItems: "center" },
     claimText: { fontWeight: "600" },
+    searchSample: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      backgroundColor: c.inputBg,
+      marginBottom: 12,
+    },
+    searchPlaceholder: { color: c.placeholder, fontSize: 16 },
     activityRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, marginBottom: 8 },
     activityIcon: { fontSize: 22 },
     activityText: { fontSize: 15, color: c.text },
@@ -212,6 +241,21 @@ const makeStyles = (c: ThemeColors) =>
     commentAuthor: { fontWeight: "700", color: c.text, fontSize: 14 },
     commentDelete: { color: c.danger, fontSize: 13, fontWeight: "600" },
     commentBody: { color: c.text, fontSize: 15 },
+    shopRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, marginBottom: 8 },
+    shopBox: {
+      width: 26,
+      height: 26,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: c.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    shopBoxOn: { backgroundColor: c.claimMine, borderColor: c.claimMine },
+    shopCheck: { color: c.onClaimMine, fontWeight: "800", fontSize: 15 },
+    shopTitle: { fontSize: 16, fontWeight: "600", color: c.text },
+    shopTitleDone: { textDecorationLine: "line-through", color: c.textMuted },
+    shopPrice: { fontSize: 14, color: c.textMuted, marginTop: 2 },
     toastSample: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginTop: 12 },
     toastText: { fontSize: 15, fontWeight: "600", textAlign: "center" },
   });

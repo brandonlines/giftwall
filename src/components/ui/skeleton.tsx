@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Animated, StyleSheet, View, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/provider";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 // A single shimmering placeholder block.
 export function Skeleton({
@@ -15,9 +16,14 @@ export function Skeleton({
   style?: ViewStyle;
 }) {
   const { colors } = useTheme();
+  const reducedMotion = useReducedMotion();
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      pulse.setValue(0.7); // static, no shimmer
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
@@ -26,7 +32,7 @@ export function Skeleton({
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, reducedMotion]);
 
   return (
     <Animated.View

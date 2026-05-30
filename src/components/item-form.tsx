@@ -13,6 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Button } from "@/components/ui/button";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
+import { clampLen, clampQuantity, parsePriceToCents, LIMITS } from "@/lib/validation";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Item } from "@/types/database";
@@ -98,18 +99,16 @@ export function ItemForm({
 
   async function submit() {
     if (!title.trim()) return;
-    const priceNum = parseFloat(priceText.replace(/[^0-9.]/g, ""));
-    const qtyNum = Math.max(1, parseInt(quantityText, 10) || 1);
     setSaving(true);
     try {
       await onSubmit({
-        title: title.trim(),
+        title: clampLen(title, LIMITS.title),
         url: url.trim() || null,
         image_url: imageUrl,
-        price_cents: Number.isFinite(priceNum) ? Math.round(priceNum * 100) : null,
+        price_cents: parsePriceToCents(priceText),
         currency,
-        note: note.trim() || null,
-        quantity: qtyNum,
+        note: note.trim() ? clampLen(note, LIMITS.note) : null,
+        quantity: clampQuantity(quantityText),
         is_priority: isPriority,
       });
     } finally {
@@ -144,6 +143,7 @@ export function ItemForm({
         placeholderTextColor={colors.placeholder}
         value={title}
         onChangeText={setTitle}
+        maxLength={LIMITS.title}
       />
 
       <View style={styles.twoCol}>
@@ -171,6 +171,7 @@ export function ItemForm({
         placeholderTextColor={colors.placeholder}
         value={note}
         onChangeText={setNote}
+        maxLength={LIMITS.note}
         multiline
       />
 

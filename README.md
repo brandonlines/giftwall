@@ -73,6 +73,20 @@ buttons. This is the quickest way for anyone to see the look on their machine.
    (native modules Expo Go doesn't include): `npx expo run:ios` /
    `npx expo run:android`, or an EAS build.
 
+## Tests & CI
+
+```bash
+npm test          # Jest unit suite (runs offline, no backend)
+npm run test:rls  # the RLS / Surprise Wall suite (needs a Supabase project)
+```
+
+`npm test` covers the pure logic that must not regress: price/time formatting,
+the claim-state derivation (multi-quantity + Surprise Wall), the offline queue,
+the `t()` i18n helper, and a **WCAG contrast checker** that fails if any palette's
+text/background pair drops below the accessible floor. `.github/workflows/ci.yml`
+runs typecheck + lint + `npm test` on every push, and the RLS suite automatically
+once Supabase secrets are added to the repo.
+
 ## Validate the backend (do this before trusting it)
 
 The app compiling does NOT prove the database behaves. Point a throwaway
@@ -171,10 +185,17 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   share/rotate + view members), wishlist detail with live claim buttons,
   add-item-by-link, owner inline edit/delete of items, a members screen with
   leave-group, and a profile screen with display name + avatar. `src/app/`.
+- **Onboarding** — a first-run 3-card intro (`src/app/onboarding.tsx`)
+  explaining the Surprise Wall; a `seen` flag in AsyncStorage shows it once, and
+  the `_layout` gate routes first-run users to it before sign-in.
 - **Privacy Policy + Terms** — canonical copy in `src/legal/content.ts`,
   rendered in-app at `legal/[doc]` (linked from Profile) and mirrored in
   `PRIVACY.md` / `TERMS.md` for public hosting (the stores need a public URL).
   PRIVACY.md also includes a data-safety summary for the submission forms.
+- **My shopping list** — a buyer-side `/shopping` screen (🛍️ in the groups
+  header) aggregating everything *you've* claimed across **all** groups, grouped
+  by recipient list, with a tap-to-check-off "bought" state and a "N left to buy"
+  count. Shows only your own claims, so the Surprise Wall is unaffected.
 - **Account controls** — in-app **data export** (own profile/lists/items/claims/
   comments to a JSON file via the share sheet) and **account deletion** (the
   `delete-account` Edge Function deletes the caller via service role; migration
@@ -187,12 +208,18 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   confirm dialogs; **Skeleton**/`SkeletonCard` shimmer placeholders on first
   load; friendly **EmptyState** screens; and cursor-based **pagination**
   (Load more / infinite scroll) on the activity feed.
+- **Responsive & motion** — `Screen` constrains content to a centered ~560px
+  column so it reads well on iPad / landscape / wide web instead of stretching;
+  Dynamic Type is honored (no disabled font scaling); a `useReducedMotion` hook
+  stills the Skeleton shimmer and Toast fade when the OS "Reduce Motion" is on.
 - **Accessibility & i18n** — theme tokens audited for WCAG AA contrast (fixed
   several low-contrast "claimed" chips, incl. white-on-pink in Northern Lights);
   `accessibilityRole`/`accessibilityLabel` on the shared Button, pressable Card,
-  and the claim/purchase/discuss/edit controls. Lightweight dependency-free i18n
-  in `src/i18n/` (string catalog + `t()` with `{var}` interpolation), wired
-  through the sign-in and groups screens; add a locale by adding a sibling map.
+  and the claim/purchase/discuss/edit controls. Lightweight i18n in `src/i18n/`
+  (string catalog + `t()` with `{var}` interpolation), wired through the sign-in
+  and groups screens. **English + Spanish**, with `expo-localization` picking the
+  device language (en fallback); the `es` catalog is typed to match `en`'s keys
+  and a unit test re-checks parity.
 - **Theming** — 5 selectable palettes (Winter Frost, Cabin Cozy, Fireside Cozy,
   Northern Lights, Mountain Chalet) in `src/theme/`. Semantic tokens (no raw hex
   in screens), persisted choice, gradient-aware `Screen` + glass `Card`
@@ -207,10 +234,22 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   state for their own list; everyone else sees claims update in real time.
   Buyers can flip a claim claimed→**purchased**, and items with a source URL show
   a tappable **View product ↗** link.
+- **Performance** — list rows (`ItemRow`, group rows, wishlist rows) are
+  `React.memo`'d with stable `useCallback` handlers (claim toggles read a
+  `claimsRef` so they don't re-create on every claim change), so typing in
+  search or toggling one claim doesn't re-render the whole list.
+- **Search & feel** — a wishlist with 4+ items gets a client-side search box
+  (title/note, with a "no matches" state); light haptic feedback on claim/purchase
+  (native only); and a subtle press-scale on the claim button.
 - **Multi-quantity claims** — a qty>1 item can be split across buyers (migration
   `0012`: per-buyer uniqueness + a quantity-cap trigger). The card shows
   "N of Q claimed" with a "Claim one" CTA until full; Surprise Wall unaffected
   (the recipient still sees no claims). Covered by `scripts/test-rls.mjs`.
+- **Input validation** — pure validators in `src/lib/validation.ts`
+  (`parsePriceToCents`, `clampQuantity`, `isSafeHttpUrl`, `clampLen`, unit-tested):
+  price ≥0 and quantity 1–999 are clamped, product links are checked to be
+  http(s) before opening (toast otherwise), and titles/notes/comments/names are
+  length-capped.
 - **Item details** — title, link (with scrape), price, **quantity** (migration
   `0006`), a free-text **note**, a **most-wanted** flag (migration `0007`,
   sorted first), and a manually-uploaded **photo** (item-images Storage bucket +

@@ -117,6 +117,7 @@ export default function ItemCommentsScreen() {
             placeholderTextColor={colors.placeholder}
             value={draft}
             onChangeText={setDraft}
+            maxLength={1000}
             multiline
           />
           <Button title="Post" onPress={send} loading={sending} />

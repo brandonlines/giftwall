@@ -15,6 +15,10 @@ export function Screen({
 }) {
   const { colors } = useTheme();
 
+  // Background fills the device; content is constrained + centered so it stays
+  // readable on iPad / landscape / wide web instead of stretching edge-to-edge.
+  const content = <View style={styles.content}>{children}</View>;
+
   if (colors.backgroundGradient) {
     return (
       <LinearGradient
@@ -23,18 +27,19 @@ export function Screen({
         end={{ x: 1, y: 1 }}
         style={[styles.fill, style]}
       >
-        {children}
+        {content}
       </LinearGradient>
     );
   }
 
   return (
     <View style={[styles.fill, { backgroundColor: colors.background }, style]}>
-      {children}
+      {content}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  content: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center" },
 });

@@ -71,6 +71,7 @@ export default function EditGroupScreen() {
           placeholder="Group name"
           placeholderTextColor={colors.placeholder}
           editable={!loading}
+          maxLength={60}
         />
         <Button title="Save" onPress={save} loading={saving} />
 

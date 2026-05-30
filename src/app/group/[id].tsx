@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -32,6 +32,8 @@ export default function GroupScreen() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const onListOpen = useCallback((listId: string) => router.push(`/list/${listId}`), [router]);
 
   const load = useCallback(async () => {
     try {
@@ -149,20 +151,9 @@ export default function GroupScreen() {
         ListEmptyComponent={
           <Text style={styles.empty}>No wishlists in this group yet.</Text>
         }
-        renderItem={({ item }) => {
-          const mine = item.owner_id === user?.id;
-          return (
-            <Card style={styles.row} onPress={() => router.push(`/list/${item.id}`)}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{item.title}</Text>
-                <Text style={styles.rowMeta}>
-                  {mine ? "Your list" : "Tap to claim gifts"}
-                </Text>
-              </View>
-              <Text style={styles.rowChevron}>›</Text>
-            </Card>
-          );
-        }}
+        renderItem={({ item }) => (
+          <WishlistRow wishlist={item} currentUserId={user?.id} onOpen={onListOpen} />
+        )}
         ListFooterComponent={
           <View style={styles.footer}>
             <Text style={styles.sectionLabel}>Add your wishlist</Text>
@@ -172,6 +163,7 @@ export default function GroupScreen() {
               placeholderTextColor={colors.placeholder}
               value={title}
               onChangeText={setTitle}
+              maxLength={80}
             />
             <Button title="Create list" onPress={createList} loading={busy} />
           </View>
@@ -180,6 +172,28 @@ export default function GroupScreen() {
     </Screen>
   );
 }
+
+const WishlistRow = memo(function WishlistRow({
+  wishlist,
+  currentUserId,
+  onOpen,
+}: {
+  wishlist: Wishlist;
+  currentUserId?: string;
+  onOpen: (id: string) => void;
+}) {
+  const styles = useThemedStyles(makeStyles);
+  const mine = wishlist.owner_id === currentUserId;
+  return (
+    <Card style={styles.row} onPress={() => onOpen(wishlist.id)} accessibilityLabel={wishlist.title}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle}>{wishlist.title}</Text>
+        <Text style={styles.rowMeta}>{mine ? "Your list" : "Tap to claim gifts"}</Text>
+      </View>
+      <Text style={styles.rowChevron}>›</Text>
+    </Card>
+  );
+});
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({

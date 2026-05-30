@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import * as Linking from "expo-linking";
+import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,6 +20,9 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { ItemForm } from "@/components/item-form";
+import { formatPrice } from "@/lib/format";
+import { deriveClaimState } from "@/lib/claim-state";
+import { isSafeHttpUrl } from "@/lib/validation";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
 import { subscribeToClaims } from "@/data/realtime";
@@ -25,18 +31,41 @@ import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Claim, Item, Wishlist } from "@/types/database";
 
+function tapFeedback() {
+  if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+}
+
+// Stable empty reference so memoized rows with no claims don't re-render.
+const NO_CLAIMS: Claim[] = [];
+
 export default function ListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const showToast = useToast();
   const [list, setList] = useState<Wishlist | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Record<string, Claim[]>>({});
   const [loaded, setLoaded] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Keep a ref to claims so the toggle handlers can stay stable (useCallback
+  // without a claims dependency) — that lets memoized rows skip re-renders.
+  const userId = user?.id;
+  const claimsRef = useRef(claims);
+  claimsRef.current = claims;
 
   const isOwner = list?.owner_id === user?.id;
+  const q = query.trim().toLowerCase();
+  const visibleItems = q
+    ? items.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          (i.note ?? "").toLowerCase().includes(q),
+      )
+    : items;
 
   const refreshClaims = useCallback(async (currentItems: Item[]) => {
     const rows = await claimsRepo.forItems(currentItems.map((i) => i.id));
@@ -77,7 +106,7 @@ export default function ListScreen() {
     return unsub;
   }, [id, isOwner, refreshClaims]);
 
-  function confirmDelete(item: Item) {
+  const confirmDelete = useCallback((item: Item) => {
     Alert.alert("Delete item", `Remove "${item.title}"?`, [
       { text: "Cancel", style: "cancel" },
       {
@@ -93,7 +122,7 @@ export default function ListScreen() {
         },
       },
     ]);
-  }
+  }, []);
 
   function confirmDeleteList() {
     Alert.alert("Delete this list?", `"${list?.title}" and all its items will be removed.`, [
@@ -113,66 +142,107 @@ export default function ListScreen() {
     ]);
   }
 
-  async function togglePurchased(item: Item) {
-    const mine = (claims[item.id] ?? []).find((c) => c.buyer_id === user?.id);
-    if (!mine) return;
-    const nextPurchased = mine.status !== "purchased";
-    setClaims((prev) => ({
-      ...prev,
-      [item.id]: (prev[item.id] ?? []).map((c) =>
-        c.buyer_id === user?.id
-          ? { ...c, status: nextPurchased ? "purchased" : "claimed" }
-          : c,
-      ),
-    }));
-    try {
-      await claimsRepo.setPurchased(item.id, nextPurchased);
-    } catch (e) {
-      showToast(String((e as Error).message) || "Couldn't update", "error");
-      await load();
-    }
-  }
-
-  async function toggleClaim(item: Item) {
-    const list = claims[item.id] ?? [];
-    const mineClaim = list.some((c) => c.buyer_id === user?.id);
-    // Optimistic update.
-    setClaims((prev) => {
-      const cur = prev[item.id] ?? [];
-      if (mineClaim) {
-        return { ...prev, [item.id]: cur.filter((c) => c.buyer_id !== user?.id) };
-      }
-      if (!user) return prev;
-      return {
+  const togglePurchased = useCallback(
+    async (item: Item) => {
+      const mine = (claimsRef.current[item.id] ?? []).find((c) => c.buyer_id === userId);
+      if (!mine) return;
+      tapFeedback();
+      const nextPurchased = mine.status !== "purchased";
+      setClaims((prev) => ({
         ...prev,
-        [item.id]: [
-          ...cur,
-          {
-            id: "optimistic",
-            item_id: item.id,
-            buyer_id: user.id,
-            status: "claimed",
-            created_at: new Date().toISOString(),
-          },
-        ],
-      };
-    });
-    try {
-      if (mineClaim) await claimsRepo.release(item.id);
-      else await claimsRepo.claim(item.id);
-    } catch (e) {
-      showToast(String((e as Error).message) || "Claim failed", "error");
-      await load(); // reconcile from server
-    }
-  }
+        [item.id]: (prev[item.id] ?? []).map((c) =>
+          c.buyer_id === userId
+            ? { ...c, status: nextPurchased ? "purchased" : "claimed" }
+            : c,
+        ),
+      }));
+      try {
+        await claimsRepo.setPurchased(item.id, nextPurchased);
+      } catch (e) {
+        showToast(String((e as Error).message) || "Couldn't update", "error");
+        await load();
+      }
+    },
+    [userId, load, showToast],
+  );
+
+  const toggleClaim = useCallback(
+    async (item: Item) => {
+      if (!userId) return;
+      const mineClaim = (claimsRef.current[item.id] ?? []).some(
+        (c) => c.buyer_id === userId,
+      );
+      tapFeedback();
+      // Optimistic update.
+      setClaims((prev) => {
+        const cur = prev[item.id] ?? [];
+        if (mineClaim) {
+          return { ...prev, [item.id]: cur.filter((c) => c.buyer_id !== userId) };
+        }
+        return {
+          ...prev,
+          [item.id]: [
+            ...cur,
+            {
+              id: "optimistic",
+              item_id: item.id,
+              buyer_id: userId,
+              status: "claimed",
+              created_at: new Date().toISOString(),
+            },
+          ],
+        };
+      });
+      try {
+        if (mineClaim) await claimsRepo.release(item.id);
+        else await claimsRepo.claim(item.id);
+      } catch (e) {
+        showToast(String((e as Error).message) || "Claim failed", "error");
+        await load(); // reconcile from server
+      }
+    },
+    [userId, load, showToast],
+  );
+
+  const openUrl = useCallback(
+    (url: string) => {
+      if (isSafeHttpUrl(url)) void Linking.openURL(url);
+      else showToast("Can't open this link", "error");
+    },
+    [showToast],
+  );
+
+  const openEditItem = useCallback(
+    (item: Item) => router.push(`/edit-item/${item.id}`),
+    [router],
+  );
+  const openDiscuss = useCallback(
+    (item: Item) => router.push(`/item-comments/${item.id}`),
+    [router],
+  );
 
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
+      {items.length > 3 && (
+        <View style={styles.searchWrap}>
+          <TextInput
+            style={styles.search}
+            placeholder="Search this list…"
+            placeholderTextColor={colors.placeholder}
+            value={query}
+            onChangeText={setQuery}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            accessibilityLabel="Search items"
+          />
+        </View>
+      )}
       <FlatList
-        data={items}
+        data={visibleItems}
         keyExtractor={(i) => i.id}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           !loaded ? (
             <View style={{ gap: 12 }}>
@@ -180,6 +250,8 @@ export default function ListScreen() {
                 <SkeletonCard key={k} />
               ))}
             </View>
+          ) : q ? (
+            <EmptyState emoji="🔎" title="No matches" hint={`Nothing matches "${query.trim()}".`} />
           ) : (
             <EmptyState
               emoji={isOwner ? "📝" : "🎁"}
@@ -195,14 +267,15 @@ export default function ListScreen() {
         renderItem={({ item }) => (
           <ItemRow
             item={item}
-            claims={claims[item.id] ?? []}
+            claims={claims[item.id]}
             isOwner={isOwner}
-            currentUserId={user?.id}
-            onToggle={() => toggleClaim(item)}
-            onTogglePurchased={() => togglePurchased(item)}
-            onEdit={() => router.push(`/edit-item/${item.id}`)}
-            onDelete={() => confirmDelete(item)}
-            onDiscuss={() => router.push(`/item-comments/${item.id}`)}
+            currentUserId={userId}
+            onToggle={toggleClaim}
+            onTogglePurchased={togglePurchased}
+            onEdit={openEditItem}
+            onDelete={confirmDelete}
+            onDiscuss={openDiscuss}
+            onOpenUrl={openUrl}
           />
         )}
         ListFooterComponent={
@@ -227,7 +300,7 @@ export default function ListScreen() {
   );
 }
 
-function ItemRow({
+const ItemRow = memo(function ItemRow({
   item,
   claims,
   isOwner,
@@ -237,25 +310,27 @@ function ItemRow({
   onEdit,
   onDelete,
   onDiscuss,
+  onOpenUrl,
 }: {
   item: Item;
-  claims: Claim[];
+  claims?: Claim[];
   isOwner: boolean;
   currentUserId?: string;
-  onToggle: () => void;
-  onTogglePurchased: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onDiscuss: () => void;
+  onToggle: (item: Item) => void;
+  onTogglePurchased: (item: Item) => void;
+  onEdit: (item: Item) => void;
+  onDelete: (item: Item) => void;
+  onDiscuss: (item: Item) => void;
+  onOpenUrl: (url: string) => void;
 }) {
   const styles = useThemedStyles(makeStyles);
-  const mine = claims.find((c) => c.buyer_id === currentUserId);
-  const count = claims.length;
-  const qty = item.quantity;
-  const multi = qty > 1;
-  const full = !mine && count >= qty;
-  const purchased = mine?.status === "purchased";
-  const countLabel = `${count} of ${qty} claimed`;
+  const { mine, count, full, purchased } = deriveClaimState(
+    claims ?? NO_CLAIMS,
+    currentUserId,
+    item.quantity,
+  );
+  const multi = item.quantity > 1;
+  const countLabel = `${count} of ${item.quantity} claimed`;
 
   return (
     <Card style={styles.item}>
@@ -284,7 +359,7 @@ function ItemRow({
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
         {item.url && (
-          <Pressable onPress={() => Linking.openURL(item.url!)} hitSlop={6}>
+          <Pressable onPress={() => onOpenUrl(item.url!)} hitSlop={6}>
             <Text style={styles.link}>View product ↗</Text>
           </Pressable>
         )}
@@ -293,7 +368,7 @@ function ItemRow({
         {isOwner ? (
           <View style={styles.ownerActions}>
             <Pressable
-              onPress={onEdit}
+              onPress={() => onEdit(item)}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`Edit ${item.title}`}
@@ -301,7 +376,7 @@ function ItemRow({
               <Text style={styles.editAction}>Edit</Text>
             </Pressable>
             <Pressable
-              onPress={onDelete}
+              onPress={() => onDelete(item)}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`Delete ${item.title}`}
@@ -317,8 +392,12 @@ function ItemRow({
             {mine ? (
               <>
                 <Pressable
-                  onPress={onToggle}
-                  style={[styles.claimBtn, styles.claimedMine]}
+                  onPress={() => onToggle(item)}
+                  style={({ pressed }) => [
+                    styles.claimBtn,
+                    styles.claimedMine,
+                    pressed && styles.pressedScale,
+                  ]}
                   accessibilityRole="button"
                   accessibilityLabel={`You're buying ${item.title}. Tap to release your claim.`}
                 >
@@ -327,7 +406,7 @@ function ItemRow({
                   </Text>
                 </Pressable>
                 <Pressable
-                  onPress={onTogglePurchased}
+                  onPress={() => onTogglePurchased(item)}
                   hitSlop={8}
                   style={styles.purchaseToggleWrap}
                   accessibilityRole="button"
@@ -346,8 +425,8 @@ function ItemRow({
               </View>
             ) : (
               <Pressable
-                onPress={onToggle}
-                style={styles.claimBtn}
+                onPress={() => onToggle(item)}
+                style={({ pressed }) => [styles.claimBtn, pressed && styles.pressedScale]}
                 accessibilityRole="button"
                 accessibilityLabel={`Claim ${item.title}`}
               >
@@ -357,7 +436,7 @@ function ItemRow({
               </Pressable>
             )}
             <Pressable
-              onPress={onDiscuss}
+              onPress={() => onDiscuss(item)}
               hitSlop={6}
               style={styles.discussWrap}
               accessibilityRole="button"
@@ -370,16 +449,23 @@ function ItemRow({
       </View>
     </Card>
   );
-}
-
-function formatPrice(cents: number, currency: string | null) {
-  const amount = (cents / 100).toFixed(2);
-  return currency ? `${currency} ${amount}` : `$${amount}`;
-}
+});
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 12 },
+    searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
+    search: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      fontSize: 16,
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
+    pressedScale: { transform: [{ scale: 0.97 }], opacity: 0.9 },
     item: { flexDirection: "row", gap: 12, padding: 12 },
     thumb: { width: 64, height: 64, borderRadius: 8, backgroundColor: c.border },
     thumbEmpty: { alignItems: "center", justifyContent: "center" },

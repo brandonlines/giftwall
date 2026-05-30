@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -33,6 +33,8 @@ export default function GroupsScreen() {
   const [name, setName] = useState("");
   const [joinId, setJoinId] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const onGroupOpen = useCallback((gid: string) => router.push(`/group/${gid}`), [router]);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -100,6 +102,13 @@ export default function GroupsScreen() {
     <Screen>
       <Stack.Screen
         options={{
+          headerLeft: () => (
+            <Link href="/shopping" asChild>
+              <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Shopping">
+                <Text style={styles.headerLink}>🛍️ Shopping</Text>
+              </Pressable>
+            </Link>
+          ),
           headerRight: () => (
             <Link href="/profile" asChild>
               <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel={t("common.profile")}>
@@ -135,12 +144,7 @@ export default function GroupsScreen() {
             />
           )
         }
-        renderItem={({ item }) => (
-          <Card style={styles.row} onPress={() => router.push(`/group/${item.id}`)}>
-            <Text style={styles.rowTitle}>{item.name}</Text>
-            <Text style={styles.rowChevron}>›</Text>
-          </Card>
-        )}
+        renderItem={({ item }) => <GroupRow group={item} onOpen={onGroupOpen} />}
         ListFooterComponent={
           <View style={styles.footer}>
             <Text style={styles.sectionLabel}>{t("groups.createSection")}</Text>
@@ -150,6 +154,7 @@ export default function GroupsScreen() {
               placeholderTextColor={colors.placeholder}
               value={name}
               onChangeText={setName}
+              maxLength={60}
             />
             <Button title={t("groups.create")} onPress={createGroup} loading={busy} />
 
@@ -176,6 +181,22 @@ export default function GroupsScreen() {
     </Screen>
   );
 }
+
+const GroupRow = memo(function GroupRow({
+  group,
+  onOpen,
+}: {
+  group: Group;
+  onOpen: (id: string) => void;
+}) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <Card style={styles.row} onPress={() => onOpen(group.id)} accessibilityLabel={group.name}>
+      <Text style={styles.rowTitle}>{group.name}</Text>
+      <Text style={styles.rowChevron}>›</Text>
+    </Card>
+  );
+});
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({

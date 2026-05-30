@@ -9,6 +9,7 @@ import {
 import { Animated, StyleSheet, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/provider";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 type ToastKind = "info" | "error" | "success";
 type ToastState = { message: string; kind: ToastKind } | null;
@@ -23,6 +24,7 @@ const ToastContext = createContext<(message: string, kind?: ToastKind) => void>(
 export function ToastProvider({ children }: { children: ReactNode }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
   const [toast, setToast] = useState<ToastState>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,16 +33,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, kind: ToastKind = "info") => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setToast({ message, kind });
-      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      if (reducedMotion) opacity.setValue(1);
+      else Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
       hideTimer.current = setTimeout(() => {
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }).start(() => setToast(null));
+        if (reducedMotion) {
+          opacity.setValue(0);
+          setToast(null);
+        } else {
+          Animated.timing(opacity, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: true,
+          }).start(() => setToast(null));
+        }
       }, 3000);
     },
-    [opacity],
+    [opacity, reducedMotion],
   );
 
   const bg =

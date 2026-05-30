@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, useAuth } from "@/providers/auth";
 import { ThemeProvider, useTheme } from "@/theme/provider";
 import { ToastProvider } from "@/components/ui/toast";
+import { onboardingSeen } from "@/lib/onboarding";
 import { initMonitoring } from "@/lib/monitoring";
 
 // Start crash reporting before anything renders (no-ops without a DSN).
@@ -30,19 +31,35 @@ function RootNavigator() {
   const { colors } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+  const [seen, setSeen] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (loading) return;
-    // /preview is a public design gallery; /sign-in is the auth screen.
-    const publicRoute = segments[0] === "sign-in" || segments[0] === "preview";
-    if (!session && !publicRoute) {
-      router.replace("/sign-in");
-    } else if (session && segments[0] === "sign-in") {
-      router.replace("/");
-    }
-  }, [session, loading, segments, router]);
+    onboardingSeen.get().then(setSeen);
+  }, []);
 
-  if (loading) {
+  useEffect(() => {
+    if (loading || seen === null) return;
+    const route = segments[0];
+    // Public routes anyone can be on (no session required).
+    const onPublic =
+      route === "sign-in" ||
+      route === "preview" ||
+      route === "onboarding";
+
+    if (session) {
+      // Signed in: bounce away from auth/intro screens.
+      if (route === "sign-in" || route === "onboarding") router.replace("/");
+      return;
+    }
+    // Not signed in: first-run users see onboarding, then sign-in.
+    if (!seen && route !== "onboarding" && !onPublic) {
+      router.replace("/onboarding");
+    } else if (seen && !onPublic) {
+      router.replace("/sign-in");
+    }
+  }, [session, loading, seen, segments, router]);
+
+  if (loading || seen === null) {
     return (
       <View
         style={{
@@ -68,9 +85,11 @@ function RootNavigator() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
+        <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="preview" options={{ title: "Theme Preview" }} />
         <Stack.Screen name="index" options={{ title: "Your Groups" }} />
+        <Stack.Screen name="shopping" options={{ title: "Shopping" }} />
         <Stack.Screen name="group/[id]" options={{ title: "Group" }} />
         <Stack.Screen name="list/[id]" options={{ title: "Wishlist" }} />
         <Stack.Screen name="members/[id]" options={{ title: "Members" }} />

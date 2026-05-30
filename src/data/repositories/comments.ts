@@ -1,6 +1,7 @@
 import { supabase, currentUserId } from "../../lib/supabase";
 import type { ItemComment } from "../../types/database";
 import { enqueue, isOfflineError } from "../offline/queue";
+import { clampLen, LIMITS } from "../../lib/validation";
 
 export type CommentEntry = ItemComment & { authorName: string; isMine: boolean };
 
@@ -33,7 +34,8 @@ export const commentsRepo = {
 
   async add(itemId: string, body: string): Promise<void> {
     const uid = await currentUserId();
-    const trimmed = body.trim();
+    const trimmed = clampLen(body, LIMITS.comment);
+    if (!trimmed) return;
     try {
       const { error } = await supabase
         .from("item_comments")
