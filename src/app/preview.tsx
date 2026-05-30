@@ -53,7 +53,7 @@ export default function PreviewScreen() {
         </Card>
         <Card style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Mom's Christmas List</Text>
+            <Text style={styles.rowTitle}>{"Mom's Christmas List"}</Text>
             <Text style={styles.rowMeta}>Tap to claim gifts · 📅 in 12 days</Text>
           </View>
           <Text style={styles.chevron}>›</Text>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Animated, StyleSheet, View, type ViewStyle } from "react-native";
 import { useTheme } from "@/theme/provider";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
@@ -17,7 +17,7 @@ export function Skeleton({
 }) {
   const { colors } = useTheme();
   const reducedMotion = useReducedMotion();
-  const pulse = useRef(new Animated.Value(0.4)).current;
+  const pulse = useState(() => new Animated.Value(0.4))[0];
 
   useEffect(() => {
     if (reducedMotion) {

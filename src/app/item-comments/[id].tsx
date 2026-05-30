@@ -93,7 +93,7 @@ export default function ItemCommentsScreen() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <Text style={styles.empty}>
-              No comments yet. Coordinate here — the recipient can't see this.
+              {"No comments yet. Coordinate here — the recipient can't see this."}
             </Text>
           }
           renderItem={({ item }) => (

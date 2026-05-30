@@ -1,3 +1,4 @@
+/* eslint-disable import/first -- jest.mock is hoisted above imports by babel-jest */
 jest.mock("@react-native-async-storage/async-storage", () => {
   let store: Record<string, string> = {};
   return {

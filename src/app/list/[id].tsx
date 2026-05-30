@@ -72,7 +72,9 @@ export default function ListScreen() {
   // without a claims dependency) — that lets memoized rows skip re-renders.
   const userId = user?.id;
   const claimsRef = useRef(claims);
-  claimsRef.current = claims;
+  useEffect(() => {
+    claimsRef.current = claims;
+  }, [claims]);
 
   const isOwner = list?.owner_id === user?.id;
   const q = query.trim().toLowerCase();

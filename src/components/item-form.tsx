@@ -62,10 +62,13 @@ export function ItemForm({
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // A tapped suggestion chip prefills the name field.
-  useEffect(() => {
+  // A tapped suggestion chip prefills the name field. Adjust state during
+  // render when the chip changes (React's "you might not need an effect").
+  const [lastSeed, setLastSeed] = useState(seedTitle);
+  if (seedTitle !== lastSeed) {
+    setLastSeed(seedTitle);
     if (seedTitle) setTitle(seedTitle);
-  }, [seedTitle]);
+  }
 
   // When adding, consume a link shared into the app from elsewhere.
   useEffect(() => {

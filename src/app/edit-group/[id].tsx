@@ -78,7 +78,7 @@ export default function EditGroupScreen() {
         <View style={styles.dangerZone}>
           <Text style={styles.label}>Danger zone</Text>
           <Text style={styles.hint}>
-            Deleting the group removes everyone's lists in it permanently.
+            {"Deleting the group removes everyone's lists in it permanently."}
           </Text>
           <Button title="Delete group" variant="danger" onPress={confirmDelete} />
         </View>
