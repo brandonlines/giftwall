@@ -90,6 +90,7 @@ function RootNavigator() {
         <Stack.Screen name="preview" options={{ title: "Theme Preview" }} />
         <Stack.Screen name="index" options={{ title: "Your Groups" }} />
         <Stack.Screen name="shopping" options={{ title: "Shopping" }} />
+        <Stack.Screen name="scan" options={{ title: "Scan a barcode" }} />
         <Stack.Screen name="group/[id]" options={{ title: "Group" }} />
         <Stack.Screen name="list/[id]" options={{ title: "Wishlist" }} />
         <Stack.Screen name="members/[id]" options={{ title: "Members" }} />

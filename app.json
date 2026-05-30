@@ -48,7 +48,13 @@
       ],
       "expo-sharing",
       "@sentry/react-native",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "giftwall uses the camera to scan product barcodes."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

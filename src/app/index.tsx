@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { groupsRepo } from "@/data/repositories/groups";
 import { pendingInvite } from "@/lib/pending-invite";
+import { pendingSharedUrl } from "@/lib/share-intent";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Group } from "@/types/database";
@@ -65,8 +66,13 @@ export default function GroupsScreen() {
           }
         }
         await load();
+        // A link shared into the app from elsewhere is waiting — nudge the
+        // user to open a list, where the add form will prefill it.
+        if (await pendingSharedUrl.get()) {
+          showToast("Shared link ready — open a list to add it", "info");
+        }
       })();
-    }, [load, router]),
+    }, [load, router, showToast]),
   );
 
   async function createGroup() {

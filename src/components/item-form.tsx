@@ -15,6 +15,7 @@ import { scrapeRepo } from "@/data/repositories/scrape";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { clampLen, clampQuantity, parsePriceToCents, LIMITS } from "@/lib/validation";
 import { splitUrls } from "@/lib/urls";
+import { pendingSharedUrl } from "@/lib/share-intent";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Item } from "@/types/database";
@@ -65,6 +66,17 @@ export function ItemForm({
   useEffect(() => {
     if (seedTitle) setTitle(seedTitle);
   }, [seedTitle]);
+
+  // When adding, consume a link shared into the app from elsewhere.
+  useEffect(() => {
+    if (initial) return;
+    pendingSharedUrl.get().then((shared) => {
+      if (shared) {
+        setUrl(shared);
+        void pendingSharedUrl.clear();
+      }
+    });
+  }, [initial]);
 
   async function pickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({

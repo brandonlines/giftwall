@@ -360,7 +360,17 @@ export default function ListScreen() {
                   </View>
                 </View>
               )}
-              <Text style={styles.sectionLabel}>Add an item</Text>
+              <View style={styles.addHeaderRow}>
+                <Text style={styles.sectionLabel}>Add an item</Text>
+                <Pressable
+                  onPress={() => router.push("/scan")}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Scan a barcode"
+                >
+                  <Text style={styles.scanLink}>📷 Scan a barcode</Text>
+                </Pressable>
+              </View>
               <ItemForm
                 submitLabel="Add to list"
                 seedTitle={seedTitle}
@@ -624,6 +634,8 @@ const makeStyles = (c: ThemeColors) =>
     editAction: { color: c.accent, fontWeight: "600" },
     deleteAction: { color: c.danger, fontWeight: "600" },
     addBox: { marginTop: 24 },
+    addHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    scanLink: { color: c.accent, fontWeight: "600", fontSize: 13, marginBottom: 8 },
     deleteListWrap: { marginTop: 24 },
     suggestWrap: { marginBottom: 20 },
     chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

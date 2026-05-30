@@ -192,6 +192,21 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   rendered in-app at `legal/[doc]` (linked from Profile) and mirrored in
   `PRIVACY.md` / `TERMS.md` for public hosting (the stores need a public URL).
   PRIVACY.md also includes a data-safety summary for the submission forms.
+- **Barcode scan** _(native)_ — a `/scan` route (`expo-camera`) lets an owner
+  scan a product barcode to start an add-item; on web it shows a "use the app"
+  message so the build stays green. Reachable from the add box. Real scanning
+  needs a device dev build.
+- **Add from anywhere** _(native)_ — share a product link into giftwall from
+  any app's share sheet and it drops into the next item you add. The in-app
+  handoff is built and tested today: a shared URL is stashed in
+  `src/lib/share-intent.ts` (`pendingSharedUrl`, AsyncStorage), the groups
+  screen nudges "Shared link ready — open a list to add it", and the add form
+  (`ItemForm`) prefills + clears it on open. The OS-level *capture* (registering
+  giftwall as a share target) is wired on a dev build with `expo-share-intent` —
+  see **Share extension** below. Confirming the share target needs a device.
+- **Price re-check** — an owner can "Refresh price" on an item with a link; it
+  re-scrapes and, if the price changed, updates it and flags a "↓ price changed"
+  badge. (Live re-scraping needs the `scrape-link` Edge Function deployed.)
 - **Occasions / countdowns** — a wishlist can have an optional event date
   (migration `0016`); the list shows a "in 12 days / Today! / Passed" countdown
   (unit-tested `src/lib/dates.ts`) in a banner and on the group's list rows.
@@ -318,6 +333,46 @@ in a simulator yet — that needs a linked Supabase project and a dev build.
   Generate from one source with `npx expo-optimize` / the Expo asset tooling, or
   design 1024² art and let EAS derive the rest.
 
+## Share extension (native)
+
+Registering giftwall as a target in the iOS/Android **share sheet** (so a product
+page in Safari/Chrome can be "shared to giftwall") needs a native module +
+config plugin, so it only runs on a **dev/production build**, not Expo Go or web.
+The app-side handoff is already done — `src/lib/share-intent.ts`'s
+`pendingSharedUrl` is read by `ItemForm` (prefills the URL) and the groups screen
+(nudges the user). All that's missing is the OS capture, which is one dependency
+plus a few lines at the root.
+
+When [`expo-share-intent`](https://github.com/achorein/expo-share-intent)
+publishes an Expo **SDK 56**–compatible release (6.1.1 still pins `expo@^55`, so
+`npx expo install expo-share-intent` currently aborts on a peer conflict — force
+it with `--legacy-peer-deps` only on a throwaway branch):
+
+1. **Add the config plugin** to `app.json` `plugins`:
+   ```json
+   ["expo-share-intent", { "iosActivationRules": { "NSExtensionActivationSupportsWebURLWithMaxCount": 1 } }]
+   ```
+2. **Wrap the root** (`src/app/_layout.tsx`) in `ShareIntentProvider`, and in a
+   child component call the hook and stash the URL:
+   ```tsx
+   import { useShareIntent } from "expo-share-intent";
+   import { pendingSharedUrl } from "@/lib/share-intent";
+   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+   useEffect(() => {
+     const url = shareIntent.webUrl ?? shareIntent.text;
+     if (hasShareIntent && url) {
+       void pendingSharedUrl.set(url);   // ItemForm + groups screen take it from here
+       resetShareIntent();
+     }
+   }, [hasShareIntent, shareIntent]);
+   ```
+3. **Keep web green** — the hook is native-only; import it in a `*.native.tsx`
+   module (or guard with `Platform.OS !== "web"`) so it never enters the web
+   bundle, exactly as `/scan` does for the camera.
+4. **Rebuild** (`npx expo prebuild` + `npx expo run:ios` / `run:android`) — a
+   share extension can't be added over-the-air. Then share a link from Safari and
+   confirm it lands in the next item you add.
+
 ## What truly remains before launch
 
 The app feature set is complete, but everything below has only been validated by
@@ -325,7 +380,7 @@ TypeScript + a web bundle + the `/preview` gallery. It has **never run against a
 real backend or on a device.** In rough order:
 
 1. **Run the backend for real** — create a Supabase project, apply migrations
-   `0001`–`0015` in order, and run `npm run test:rls` (see `VALIDATION.md`). The
+   `0001`–`0016` in order, and run `npm run test:rls` (see `VALIDATION.md`). The
    Surprise Wall RLS, triggers (activity, claim cap), and policies are reviewed
    but **never executed**. This is the single most important step.
 2. **Deploy the Edge Functions** (`scrape-link`, `send-push`, `delete-account`)
