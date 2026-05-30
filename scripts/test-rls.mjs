@@ -19,18 +19,32 @@
 // Exits non-zero if any assertion fails. Always cleans up its test data.
 
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 // --- tiny .env.test loader (no dependency) --------------------------------
+// Reads KEY=value lines from .env.test into process.env without clobbering vars
+// already set in the real environment (e.g. provided by CI).
+// NOTE: resolve the path with fileURLToPath, NOT `new URL(...)` — this module
+// declares `const URL` below, so referencing the global URL here would hit that
+// binding's temporal dead zone, throw, and (caught) silently skip the file.
 function loadEnv() {
-  try {
-    const txt = readFileSync(new URL("../.env.test", import.meta.url), "utf8");
-    for (const line of txt.split("\n")) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+  const here = dirname(fileURLToPath(import.meta.url));
+  const candidates = [resolve(here, "../.env.test"), resolve(process.cwd(), ".env.test")];
+  for (const file of candidates) {
+    let txt;
+    try {
+      txt = readFileSync(file, "utf8");
+    } catch {
+      continue; // not at this path — try the next (the file may be absent in CI)
+    }
+    for (const line of txt.split(/\r?\n/)) {
+      if (/^\s*#/.test(line)) continue; // skip comments
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/);
       if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^['"]|['"]$/g, "");
     }
-  } catch {
-    /* fall back to real env */
+    return;
   }
 }
 loadEnv();
@@ -40,9 +54,12 @@ const ANON = process.env.SUPABASE_ANON_KEY;
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!URL || !ANON || !SERVICE) {
+  const state = (v) => (v ? "set" : "MISSING");
   console.error(
-    "Missing env. Need SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY " +
-      "(put them in .env.test).",
+    "Missing env. Put SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY in " +
+      ".env.test (see .env.test.example).\n" +
+      `  SUPABASE_URL=${state(URL)}  SUPABASE_ANON_KEY=${state(ANON)}  ` +
+      `SUPABASE_SERVICE_ROLE_KEY=${state(SERVICE)}`,
   );
   process.exit(2);
 }
