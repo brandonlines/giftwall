@@ -102,6 +102,10 @@ function RootNavigator() {
         />
         <Stack.Screen name="join/[code]" options={{ title: "Joining…" }} />
         <Stack.Screen
+          name="group-qr/[id]"
+          options={{ title: "Invite", presentation: "modal" }}
+        />
+        <Stack.Screen
           name="edit-item/[id]"
           options={{ title: "Edit item", presentation: "modal" }}
         />

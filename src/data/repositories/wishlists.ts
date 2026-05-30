@@ -24,15 +24,27 @@ export const wishlistsRepo = {
     return data ?? [];
   },
 
-  async create(groupId: string, title: string): Promise<Wishlist> {
+  async create(
+    groupId: string,
+    title: string,
+    eventDate?: string | null,
+  ): Promise<Wishlist> {
     const uid = await currentUserId();
     const { data, error } = await supabase
       .from("wishlists")
-      .insert({ group_id: groupId, owner_id: uid, title })
+      .insert({ group_id: groupId, owner_id: uid, title, event_date: eventDate ?? null })
       .select()
       .single();
     if (error) throw error;
     return data;
+  },
+
+  async setEventDate(listId: string, eventDate: string | null): Promise<void> {
+    const { error } = await supabase
+      .from("wishlists")
+      .update({ event_date: eventDate })
+      .eq("id", listId);
+    if (error) throw error;
   },
 
   async getItem(itemId: string): Promise<Item> {

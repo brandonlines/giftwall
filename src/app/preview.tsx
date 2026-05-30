@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
@@ -53,10 +54,25 @@ export default function PreviewScreen() {
         <Card style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowTitle}>Mom's Christmas List</Text>
-            <Text style={styles.rowMeta}>Tap to claim gifts</Text>
+            <Text style={styles.rowMeta}>Tap to claim gifts · 📅 in 12 days</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </Card>
+
+        <Text style={styles.section}>Gift idea chips (empty list)</Text>
+        <View style={styles.ideaChips}>
+          {["Books", "Kitchen", "Cozy", "Tech", "Experiences", "Games"].map((cat) => (
+            <View key={cat} style={styles.ideaChip}>
+              <Text style={styles.ideaChipText}>{cat}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Text style={styles.section}>Invite QR (scan to join)</Text>
+        <View style={styles.qrSample}>
+          <QRCode value="giftwall://join/FROST24" size={140} color={colors.text} backgroundColor="transparent" />
+          <Text style={styles.qrCode}>FROST24</Text>
+        </View>
 
         <Text style={styles.section}>Wishlist items</Text>
         <View style={styles.searchSample}>
@@ -69,9 +85,10 @@ export default function PreviewScreen() {
           <View style={{ flex: 1, gap: 6 }}>
             <Text style={styles.priorityTag}>★ Most wanted</Text>
             <Text style={styles.itemTitle}>Wireless Headphones</Text>
-            <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
               <Text style={styles.price}>$129.00</Text>
               <Text style={[styles.price, { fontWeight: "600" }]}>Qty: 2</Text>
+              <Text style={styles.priceBadge}>↓ price changed</Text>
             </View>
             <Text style={styles.note}>Note: over-ear, charcoal colour</Text>
             <Text style={styles.link}>View product ↗</Text>
@@ -217,11 +234,26 @@ const makeStyles = (c: ThemeColors) =>
     itemTitle: { fontSize: 16, fontWeight: "600", color: c.text },
     priorityTag: { fontSize: 12, fontWeight: "800", color: c.accent },
     price: { fontSize: 14, color: c.textMuted },
+    priceBadge: { fontSize: 12, fontWeight: "700", color: c.accent },
     note: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
     countLabel: { fontSize: 12, color: c.textMuted, fontWeight: "700" },
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
     claimBtn: { marginTop: 4, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, alignItems: "center" },
     claimText: { fontWeight: "600" },
+    ideaChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+    ideaChip: { backgroundColor: c.accentSoft, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14 },
+    ideaChipText: { color: c.onAccentSoft, fontWeight: "600", fontSize: 14 },
+    qrSample: {
+      alignItems: "center",
+      padding: 20,
+      gap: 10,
+      marginBottom: 12,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
+    qrCode: { fontSize: 20, fontWeight: "800", color: c.accent, letterSpacing: 2 },
     searchSample: {
       borderWidth: 1,
       borderColor: c.inputBorder,

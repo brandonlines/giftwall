@@ -28,9 +28,22 @@ export interface Database {
         Relationships: [];
       };
       wishlists: {
-        Row: { id: string; group_id: string; owner_id: string; title: string; created_at: string };
-        Insert: { id?: string; group_id: string; owner_id: string; title: string };
-        Update: { title?: string };
+        Row: {
+          id: string;
+          group_id: string;
+          owner_id: string;
+          title: string;
+          event_date: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          group_id: string;
+          owner_id: string;
+          title: string;
+          event_date?: string | null;
+        };
+        Update: { title?: string; event_date?: string | null };
         Relationships: [];
       };
       items: {

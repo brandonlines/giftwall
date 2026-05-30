@@ -192,6 +192,11 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   rendered in-app at `legal/[doc]` (linked from Profile) and mirrored in
   `PRIVACY.md` / `TERMS.md` for public hosting (the stores need a public URL).
   PRIVACY.md also includes a data-safety summary for the submission forms.
+- **Occasions / countdowns** — a wishlist can have an optional event date
+  (migration `0016`); the list shows a "in 12 days / Today! / Passed" countdown
+  (unit-tested `src/lib/dates.ts`) in a banner and on the group's list rows.
+  Owners set/clear it on the list; timed push *reminders* are a follow-up
+  (needs a scheduled Edge Function).
 - **My shopping list** — a buyer-side `/shopping` screen (🛍️ in the groups
   header) aggregating everything *you've* claimed across **all** groups, grouped
   by recipient list, with a tap-to-check-off "bought" state and a "N left to buy"
@@ -225,6 +230,9 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   in screens), persisted choice, gradient-aware `Screen` + glass `Card`
   (real `expo-blur` background blur for Northern Lights), and a picker in Profile.
   Default: Winter Frost. A `/preview` gallery shows them all without a backend.
+- **QR invite** — tapping a group's invite-code card opens a `group-qr/[id]`
+  modal with a scannable QR of the join link (`react-native-qrcode-svg`), so
+  family can scan-to-join in person; a "Share link instead" fallback is there too.
 - **Invite codes + join links** — short, unambiguous, revocable codes (migration
   `0003`) via `redeem_invite` / `rotate_invite_code` RPCs. The group screen
   shares a deep link (`giftwall://join/<CODE>`); opening it joins exactly that
@@ -250,6 +258,13 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   price ≥0 and quantity 1–999 are clamped, product links are checked to be
   http(s) before opening (toast otherwise), and titles/notes/comments/names are
   length-capped.
+- **Empty-list suggestions** — an owner's empty wishlist shows tappable
+  category chips (Books, Kitchen, Cozy, Tech, Experiences, …) that prefill the
+  add form's name field (via a `seedTitle` prop on `ItemForm`) to beat the
+  blank-page problem.
+- **Bulk paste add** — paste several product links at once (a unit-tested
+  `splitUrls()` keeps the valid http(s) ones) and each becomes its own scraped
+  item; single-link behavior is unchanged.
 - **Item details** — title, link (with scrape), price, **quantity** (migration
   `0006`), a free-text **note**, a **most-wanted** flag (migration `0007`,
   sorted first), and a manually-uploaded **photo** (item-images Storage bucket +

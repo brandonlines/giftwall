@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { clampLen, clampQuantity, parsePriceToCents, LIMITS } from "@/lib/validation";
+import { splitUrls } from "@/lib/urls";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Item } from "@/types/database";
@@ -36,10 +37,12 @@ export function ItemForm({
   initial,
   submitLabel,
   onSubmit,
+  seedTitle,
 }: {
   initial?: Partial<Item>;
   submitLabel: string;
   onSubmit: (value: ItemFormValue) => Promise<void>;
+  seedTitle?: string;
 }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
@@ -57,6 +60,11 @@ export function ItemForm({
   const [scraping, setScraping] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  // A tapped suggestion chip prefills the name field.
+  useEffect(() => {
+    if (seedTitle) setTitle(seedTitle);
+  }, [seedTitle]);
 
   async function pickPhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,7 +105,56 @@ export function ItemForm({
     }
   }
 
+  function resetForm() {
+    setUrl("");
+    setTitle("");
+    setPriceText("");
+    setQuantityText("1");
+    setNote("");
+    setImageUrl(null);
+    setCurrency(null);
+    setIsPriority(false);
+  }
+
   async function submit() {
+    // Bulk: when adding (not editing) and several links were pasted, create one
+    // item per link, scraping each (falling back to the raw URL as the title).
+    const urls = initial ? [] : splitUrls(url);
+    if (urls.length > 1) {
+      setSaving(true);
+      try {
+        for (const u of urls) {
+          let itemTitle = u;
+          let image: string | null = null;
+          let priceCents: number | null = null;
+          let curr: string | null = null;
+          try {
+            const p = await scrapeRepo.fromUrl(u);
+            if (p.title) itemTitle = p.title;
+            image = p.image;
+            priceCents = p.price_cents;
+            curr = p.currency;
+          } catch {
+            /* keep the URL as the title */
+          }
+          await onSubmit({
+            title: clampLen(itemTitle, LIMITS.title),
+            url: u,
+            image_url: image,
+            price_cents: priceCents,
+            currency: curr,
+            note: null,
+            quantity: 1,
+            is_priority: false,
+          });
+        }
+        resetForm();
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (!title.trim()) return;
     setSaving(true);
     try {
@@ -136,6 +193,7 @@ export function ItemForm({
           )}
         </Pressable>
       </View>
+      {!initial && <Text style={styles.tip}>Tip: paste several links to add them all at once.</Text>}
 
       <TextInput
         style={styles.input}
@@ -220,6 +278,7 @@ export function ItemForm({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     urlRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+    tip: { color: c.textMuted, fontSize: 12, marginTop: -4, marginBottom: 10 },
     twoCol: { flexDirection: "row", gap: 8 },
     input: {
       borderWidth: 1,

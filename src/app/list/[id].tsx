@@ -23,8 +23,10 @@ import { ItemForm } from "@/components/item-form";
 import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
 import { isSafeHttpUrl } from "@/lib/validation";
+import { formatCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
+import { scrapeRepo } from "@/data/repositories/scrape";
 import { subscribeToClaims } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
@@ -38,6 +40,18 @@ function tapFeedback() {
 // Stable empty reference so memoized rows with no claims don't re-render.
 const NO_CLAIMS: Claim[] = [];
 
+// Prompts to seed an empty list — tapping one prefills the add form's name.
+const GIFT_CATEGORIES = [
+  "Books",
+  "Kitchen",
+  "Cozy",
+  "Tech",
+  "Experiences",
+  "Games",
+  "Self-care",
+  "Outdoors",
+];
+
 export default function ListScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -50,6 +64,9 @@ export default function ListScreen() {
   const [claims, setClaims] = useState<Record<string, Claim[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
+  const [seedTitle, setSeedTitle] = useState<string | undefined>();
+  const [eventDateText, setEventDateText] = useState("");
+  const [priceChanged, setPriceChanged] = useState<Set<string>>(() => new Set());
 
   // Keep a ref to claims so the toggle handlers can stay stable (useCallback
   // without a claims dependency) — that lets memoized rows skip re-renders.
@@ -81,6 +98,7 @@ export default function ListScreen() {
         wishlistsRepo.items(id),
       ]);
       setList(w);
+      setEventDateText(w.event_date ?? "");
       setItems(its);
       await refreshClaims(its);
     } catch (e) {
@@ -216,6 +234,42 @@ export default function ListScreen() {
     (item: Item) => router.push(`/edit-item/${item.id}`),
     [router],
   );
+
+  // Re-scrape an item's link and update its price if it changed.
+  const refreshPrice = useCallback(
+    async (item: Item) => {
+      if (!item.url) return;
+      try {
+        const p = await scrapeRepo.fromUrl(item.url);
+        if (p.price_cents != null && p.price_cents !== item.price_cents) {
+          await wishlistsRepo.updateItem(item.id, { price_cents: p.price_cents });
+          setPriceChanged((prev) => new Set(prev).add(item.id));
+          await load();
+          showToast("Price updated", "success");
+        } else {
+          showToast("Price unchanged");
+        }
+      } catch {
+        showToast("Couldn't refresh price", "error");
+      }
+    },
+    [load, showToast],
+  );
+
+  async function saveEventDate() {
+    const v = eventDateText.trim();
+    if (v && !isValidDateStr(v)) {
+      showToast("Use a date like 2026-12-25", "error");
+      return;
+    }
+    try {
+      await wishlistsRepo.setEventDate(id, v || null);
+      await load();
+      showToast("Occasion date saved", "success");
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't save date", "error");
+    }
+  }
   const openDiscuss = useCallback(
     (item: Item) => router.push(`/item-comments/${item.id}`),
     [router],
@@ -224,6 +278,11 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
+      {list?.event_date && formatCountdown(list.event_date) ? (
+        <View style={styles.countdownBanner}>
+          <Text style={styles.countdownText}>📅 {formatCountdown(list.event_date)}</Text>
+        </View>
+      ) : null}
       {items.length > 3 && (
         <View style={styles.searchWrap}>
           <TextInput
@@ -276,19 +335,56 @@ export default function ListScreen() {
             onDelete={confirmDelete}
             onDiscuss={openDiscuss}
             onOpenUrl={openUrl}
+            onRefreshPrice={refreshPrice}
+            priceChanged={priceChanged.has(item.id)}
           />
         )}
         ListFooterComponent={
           isOwner ? (
             <View style={styles.addBox}>
+              {loaded && items.length === 0 && (
+                <View style={styles.suggestWrap}>
+                  <Text style={styles.sectionLabel}>Need ideas?</Text>
+                  <View style={styles.chips}>
+                    {GIFT_CATEGORIES.map((cat) => (
+                      <Pressable
+                        key={cat}
+                        style={styles.chip}
+                        onPress={() => setSeedTitle(cat)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Add a ${cat} idea`}
+                      >
+                        <Text style={styles.chipText}>{cat}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+              )}
               <Text style={styles.sectionLabel}>Add an item</Text>
               <ItemForm
                 submitLabel="Add to list"
+                seedTitle={seedTitle}
                 onSubmit={async (v) => {
                   await wishlistsRepo.addItem(id, v);
                   await load();
                 }}
               />
+              <View style={styles.occasionWrap}>
+                <Text style={styles.sectionLabel}>Occasion date</Text>
+                <View style={styles.occasionRow}>
+                  <TextInput
+                    style={[styles.search, { flex: 1 }]}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.placeholder}
+                    value={eventDateText}
+                    onChangeText={setEventDateText}
+                    autoCapitalize="none"
+                    maxLength={10}
+                  />
+                  <Button title="Save" variant="secondary" onPress={saveEventDate} />
+                </View>
+              </View>
+
               <View style={styles.deleteListWrap}>
                 <Button title="Delete this list" variant="danger" onPress={confirmDeleteList} />
               </View>
@@ -311,6 +407,8 @@ const ItemRow = memo(function ItemRow({
   onDelete,
   onDiscuss,
   onOpenUrl,
+  onRefreshPrice,
+  priceChanged,
 }: {
   item: Item;
   claims?: Claim[];
@@ -322,6 +420,8 @@ const ItemRow = memo(function ItemRow({
   onDelete: (item: Item) => void;
   onDiscuss: (item: Item) => void;
   onOpenUrl: (url: string) => void;
+  onRefreshPrice: (item: Item) => void;
+  priceChanged?: boolean;
 }) {
   const styles = useThemedStyles(makeStyles);
   const { mine, count, full, purchased } = deriveClaimState(
@@ -355,6 +455,7 @@ const ItemRow = memo(function ItemRow({
           {item.quantity > 1 && (
             <Text style={styles.qty}>Qty: {item.quantity}</Text>
           )}
+          {priceChanged && <Text style={styles.priceBadge}>↓ price changed</Text>}
         </View>
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
@@ -383,6 +484,16 @@ const ItemRow = memo(function ItemRow({
             >
               <Text style={styles.deleteAction}>Delete</Text>
             </Pressable>
+            {item.url && (
+              <Pressable
+                onPress={() => onRefreshPrice(item)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Refresh price for ${item.title}`}
+              >
+                <Text style={styles.editAction}>Refresh price</Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           <View style={{ gap: 6 }}>
@@ -454,6 +565,18 @@ const ItemRow = memo(function ItemRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 12 },
+    countdownBanner: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      backgroundColor: c.accentSoft,
+      alignItems: "center",
+    },
+    countdownText: { color: c.onAccentSoft, fontWeight: "700", fontSize: 14 },
+    occasionWrap: { marginTop: 24 },
+    occasionRow: { flexDirection: "row", gap: 8, alignItems: "center" },
     searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
     search: {
       borderWidth: 1,
@@ -476,6 +599,7 @@ const makeStyles = (c: ThemeColors) =>
     metaRow: { flexDirection: "row", gap: 12, alignItems: "center" },
     price: { fontSize: 14, color: c.textMuted },
     qty: { fontSize: 14, color: c.textMuted, fontWeight: "600" },
+    priceBadge: { fontSize: 12, color: c.accent, fontWeight: "700" },
     note: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
     countLabel: { fontSize: 12, color: c.textMuted, fontWeight: "700" },
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
@@ -501,6 +625,15 @@ const makeStyles = (c: ThemeColors) =>
     deleteAction: { color: c.danger, fontWeight: "600" },
     addBox: { marginTop: 24 },
     deleteListWrap: { marginTop: 24 },
+    suggestWrap: { marginBottom: 20 },
+    chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    chip: {
+      backgroundColor: c.accentSoft,
+      borderRadius: 20,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+    },
+    chipText: { color: c.onAccentSoft, fontWeight: "600", fontSize: 14 },
     sectionLabel: {
       fontSize: 13,
       fontWeight: "700",

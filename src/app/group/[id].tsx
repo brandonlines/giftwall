@@ -14,6 +14,8 @@ import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-rou
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
+import { useToast } from "@/components/ui/toast";
+import { formatCountdown, isValidDateStr } from "@/lib/dates";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { useAuth } from "@/providers/auth";
@@ -31,7 +33,9 @@ export default function GroupScreen() {
   const [lists, setLists] = useState<Wishlist[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [title, setTitle] = useState("");
+  const [eventDate, setEventDate] = useState("");
   const [busy, setBusy] = useState(false);
+  const showToast = useToast();
 
   const onListOpen = useCallback((listId: string) => router.push(`/list/${listId}`), [router]);
 
@@ -81,10 +85,16 @@ export default function GroupScreen() {
 
   async function createList() {
     if (!title.trim()) return;
+    const date = eventDate.trim();
+    if (date && !isValidDateStr(date)) {
+      showToast("Use a date like 2026-12-25", "error");
+      return;
+    }
     setBusy(true);
     try {
-      await wishlistsRepo.create(id, title.trim());
+      await wishlistsRepo.create(id, title.trim(), date || null);
       setTitle("");
+      setEventDate("");
       await load();
     } catch (e) {
       Alert.alert("Couldn't create list", String((e as Error).message));
@@ -112,9 +122,9 @@ export default function GroupScreen() {
         ListHeaderComponent={
           group ? (
             <View>
-              <Card style={styles.codeCard} onPress={shareInvite}>
+              <Card style={styles.codeCard} onPress={() => router.push(`/group-qr/${id}`)}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.codeLabel}>Invite code · tap to share</Text>
+                  <Text style={styles.codeLabel}>Invite code · tap for QR</Text>
                   <Text style={styles.code}>{group.invite_code}</Text>
                 </View>
                 {isAdmin && (
@@ -165,6 +175,15 @@ export default function GroupScreen() {
               onChangeText={setTitle}
               maxLength={80}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Occasion date (optional, YYYY-MM-DD)"
+              placeholderTextColor={colors.placeholder}
+              value={eventDate}
+              onChangeText={setEventDate}
+              autoCapitalize="none"
+              maxLength={10}
+            />
             <Button title="Create list" onPress={createList} loading={busy} />
           </View>
         }
@@ -184,11 +203,15 @@ const WishlistRow = memo(function WishlistRow({
 }) {
   const styles = useThemedStyles(makeStyles);
   const mine = wishlist.owner_id === currentUserId;
+  const countdown = wishlist.event_date ? formatCountdown(wishlist.event_date) : null;
   return (
     <Card style={styles.row} onPress={() => onOpen(wishlist.id)} accessibilityLabel={wishlist.title}>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{wishlist.title}</Text>
-        <Text style={styles.rowMeta}>{mine ? "Your list" : "Tap to claim gifts"}</Text>
+        <Text style={styles.rowMeta}>
+          {mine ? "Your list" : "Tap to claim gifts"}
+          {countdown ? ` · 📅 ${countdown}` : ""}
+        </Text>
       </View>
       <Text style={styles.rowChevron}>›</Text>
     </Card>
