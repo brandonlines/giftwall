@@ -10,7 +10,10 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "usesAppleSignIn": true,
-      "bundleIdentifier": "com.giftwall.app"
+      "bundleIdentifier": "com.giftwall.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,6 +25,8 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.giftwall.app",
       "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ]
@@ -70,6 +75,12 @@
         "projectId": "ed7a8fd2-4a86-440f-a34f-7eda9fb3eb6c"
       }
     },
-    "owner": "blines"
+    "owner": "blines",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ed7a8fd2-4a86-440f-a34f-7eda9fb3eb6c"
+    }
   }
 }
