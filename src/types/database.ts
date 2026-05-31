@@ -35,6 +35,7 @@ export interface Database {
           owner_id: string;
           title: string;
           event_date: string | null;
+          recurs_yearly: boolean;
           created_at: string;
         };
         Insert: {
@@ -43,8 +44,9 @@ export interface Database {
           owner_id: string;
           title: string;
           event_date?: string | null;
+          recurs_yearly?: boolean;
         };
-        Update: { title?: string; event_date?: string | null };
+        Update: { title?: string; event_date?: string | null; recurs_yearly?: boolean };
         Relationships: [];
       };
       items: {

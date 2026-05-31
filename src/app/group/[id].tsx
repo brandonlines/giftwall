@@ -5,6 +5,7 @@ import {
   Pressable,
   Share,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -15,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
-import { formatCountdown, isValidDateStr } from "@/lib/dates";
+import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { santaRepo } from "@/data/repositories/santa";
@@ -36,6 +37,7 @@ export default function GroupScreen() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [recurs, setRecurs] = useState(false);
   const [busy, setBusy] = useState(false);
   const [santaReceiver, setSantaReceiver] = useState<string | null>(null);
   const [santaDrawn, setSantaDrawn] = useState(false);
@@ -131,9 +133,10 @@ export default function GroupScreen() {
     }
     setBusy(true);
     try {
-      await wishlistsRepo.create(id, title.trim(), date || null);
+      await wishlistsRepo.create(id, title.trim(), date || null, date ? recurs : false);
       setTitle("");
       setEventDate("");
+      setRecurs(false);
       await load();
     } catch (e) {
       Alert.alert("Couldn't create list", String((e as Error).message));
@@ -262,6 +265,16 @@ export default function GroupScreen() {
               autoCapitalize="none"
               maxLength={10}
             />
+            {eventDate.trim() ? (
+              <View style={styles.recurRow}>
+                <Switch
+                  value={recurs}
+                  onValueChange={setRecurs}
+                  accessibilityLabel="Repeats every year"
+                />
+                <Text style={styles.recurLabel}>🔁 Repeats every year (birthday)</Text>
+              </View>
+            ) : null}
             <Button title="Create list" onPress={createList} loading={busy} />
           </View>
         }
@@ -281,14 +294,16 @@ const WishlistRow = memo(function WishlistRow({
 }) {
   const styles = useThemedStyles(makeStyles);
   const mine = wishlist.owner_id === currentUserId;
-  const countdown = wishlist.event_date ? formatCountdown(wishlist.event_date) : null;
+  const countdown = wishlist.event_date
+    ? occasionCountdown(wishlist.event_date, wishlist.recurs_yearly)
+    : null;
   return (
     <Card style={styles.row} onPress={() => onOpen(wishlist.id)} accessibilityLabel={wishlist.title}>
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{wishlist.title}</Text>
         <Text style={styles.rowMeta}>
           {mine ? "Your list" : "Tap to claim gifts"}
-          {countdown ? ` · 📅 ${countdown}` : ""}
+          {countdown ? ` · 📅 ${countdown}${wishlist.recurs_yearly ? " 🔁" : ""}` : ""}
         </Text>
       </View>
       <Text style={styles.rowChevron}>›</Text>
@@ -351,4 +366,6 @@ const makeStyles = (c: ThemeColors) =>
     santaText: { fontSize: 15, color: c.text, lineHeight: 21 },
     santaName: { fontWeight: "800", color: c.accent },
     santaLink: { color: c.accent, fontWeight: "700", textAlign: "center", paddingVertical: 4 },
+    recurRow: { flexDirection: "row", gap: 10, alignItems: "center", marginBottom: 10 },
+    recurLabel: { fontSize: 14, color: c.text, flex: 1 },
   });

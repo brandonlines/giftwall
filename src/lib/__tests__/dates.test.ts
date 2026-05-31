@@ -1,4 +1,10 @@
-import { isValidDateStr, daysUntil, formatCountdown } from "../dates";
+import {
+  isValidDateStr,
+  daysUntil,
+  formatCountdown,
+  nextOccurrence,
+  occasionCountdown,
+} from "../dates";
 
 const NOW = Date.UTC(2026, 4, 29); // 2026-05-29 UTC midnight
 
@@ -39,5 +45,39 @@ describe("formatCountdown", () => {
   });
   it("returns null for invalid input", () => {
     expect(formatCountdown("nope", NOW)).toBeNull();
+  });
+});
+
+describe("nextOccurrence", () => {
+  it("leaves one-off dates unchanged", () => {
+    expect(nextOccurrence("2026-05-24", false, NOW)).toBe("2026-05-24");
+    expect(nextOccurrence("2020-01-01", false, NOW)).toBe("2020-01-01");
+  });
+  it("keeps a recurring date still ahead this year", () => {
+    expect(nextOccurrence("2026-12-25", true, NOW)).toBe("2026-12-25");
+  });
+  it("rolls a passed recurring date to next year, ignoring the stored year", () => {
+    // Birthday stored as 1990-03-10 — already passed in 2026, so next is 2027.
+    expect(nextOccurrence("1990-03-10", true, NOW)).toBe("2027-03-10");
+    // A date earlier this calendar year also rolls forward.
+    expect(nextOccurrence("2026-05-28", true, NOW)).toBe("2027-05-28");
+  });
+  it("treats today as the occurrence (no roll)", () => {
+    expect(nextOccurrence("2000-05-29", true, NOW)).toBe("2026-05-29");
+  });
+  it("returns invalid input unchanged", () => {
+    expect(nextOccurrence("nope", true, NOW)).toBe("nope");
+  });
+});
+
+describe("occasionCountdown", () => {
+  it("counts down to the next occurrence for recurring dates", () => {
+    expect(occasionCountdown("2000-05-29", true, NOW)).toBe("Today!");
+    expect(occasionCountdown("1990-05-30", true, NOW)).toBe("Tomorrow");
+    // A long-passed birthday reads as a future countdown, never "ago".
+    expect(occasionCountdown("1985-05-24", true, NOW)).toBe("in 360 days");
+  });
+  it("behaves like formatCountdown for one-off dates", () => {
+    expect(occasionCountdown("2026-05-24", false, NOW)).toBe("5 days ago");
   });
 });
