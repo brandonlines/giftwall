@@ -39,3 +39,19 @@ export function clampLen(s: string, max: number): string {
   const t = s.trim();
   return t.length > max ? t.slice(0, max) : t;
 }
+
+// Public-profile handle. Lowercased; spaces and runs of other characters
+// collapse to a single underscore; trimmed to [a-z0-9_]. Returns "" if nothing
+// usable remains. The DB enforces the same `^[a-z0-9_]{3,30}$` shape.
+export function normalizeUsername(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 30);
+}
+
+export function isValidUsername(input: string): boolean {
+  return /^[a-z0-9_]{3,30}$/.test(input);
+}

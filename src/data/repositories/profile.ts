@@ -42,6 +42,22 @@ export const profileRepo = {
     if (error) throw error;
   },
 
+  // Public-profile handle (gift-well.ca/u/<username>). Pass null to clear it and
+  // take the profile offline. Maps the unique-violation to a friendly message.
+  async setUsername(username: string | null): Promise<void> {
+    const uid = await currentUserId();
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ id: uid, username: username || null });
+    if (error) {
+      if (error.code === "23505") throw new Error("That handle is already taken.");
+      if (error.code === "23514") {
+        throw new Error("Handles use 3–30 letters, numbers or underscores.");
+      }
+      throw error;
+    }
+  },
+
   // Uploads a base64 image (from the picker) to the user's own storage folder,
   // saves the public URL on the profile, and returns it. A cache-busting query
   // param forces clients to refetch after an overwrite at the same path.

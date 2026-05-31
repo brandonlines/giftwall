@@ -420,6 +420,24 @@ async function run() {
     .insert({ group_id: group.id, author_id: bob.id, body: "not me" });
   check("Cannot post a message as another user", !!carolForgeMsg.error, "expected RLS error");
 
+  // --- public profile (is_public) ------------------------------------------
+  // Marking a list public must NOT widen table RLS — the public page is served
+  // only by the service-role public-profile function. An outsider (and anon)
+  // still reads nothing through the normal table API.
+  console.log("\nPublic profile (is_public):");
+  await alice.client.from("wishlists").update({ is_public: true }).eq("id", list.id);
+  const malloryPublicList = await mallory.client.from("wishlists").select("*").eq("id", list.id);
+  check(
+    "Outsider still cannot read a public list via the table API",
+    (malloryPublicList.data?.length ?? 0) === 0,
+  );
+  const malloryPublicItems = await mallory.client.from("items").select("*").eq("list_id", list.id);
+  check(
+    "Outsider still cannot read a public list's items via the table API",
+    (malloryPublicItems.data?.length ?? 0) === 0,
+  );
+  await alice.client.from("wishlists").update({ is_public: false }).eq("id", list.id);
+
   // --- activity feed -------------------------------------------------------
   console.log("\nActivity feed:");
   const bobActivity = await bob.client.from("activity").select("*").eq("group_id", group.id);

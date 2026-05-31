@@ -3,6 +3,8 @@ import {
   clampQuantity,
   isSafeHttpUrl,
   clampLen,
+  normalizeUsername,
+  isValidUsername,
 } from "../validation";
 
 describe("parsePriceToCents", () => {
@@ -50,5 +52,35 @@ describe("clampLen", () => {
   it("trims and caps", () => {
     expect(clampLen("  hi  ", 10)).toBe("hi");
     expect(clampLen("abcdef", 3)).toBe("abc");
+  });
+});
+
+describe("normalizeUsername", () => {
+  it("lowercases and collapses non-alphanumerics to underscores", () => {
+    expect(normalizeUsername("Brandon Lines")).toBe("brandon_lines");
+    expect(normalizeUsername("  J.D.  ")).toBe("j_d");
+    expect(normalizeUsername("café-2025!")).toBe("caf_2025");
+  });
+  it("trims leading/trailing underscores and caps at 30 chars", () => {
+    expect(normalizeUsername("__hi__")).toBe("hi");
+    expect(normalizeUsername("a".repeat(40))).toHaveLength(30);
+  });
+  it("returns empty when nothing usable remains", () => {
+    expect(normalizeUsername("!!!")).toBe("");
+    expect(normalizeUsername("   ")).toBe("");
+  });
+});
+
+describe("isValidUsername", () => {
+  it("accepts 3–30 char lowercase handles", () => {
+    expect(isValidUsername("brandon")).toBe(true);
+    expect(isValidUsername("a_b_2")).toBe(true);
+  });
+  it("rejects too short, too long, or illegal characters", () => {
+    expect(isValidUsername("ab")).toBe(false);
+    expect(isValidUsername("a".repeat(31))).toBe(false);
+    expect(isValidUsername("Brandon")).toBe(false); // uppercase
+    expect(isValidUsername("has space")).toBe(false);
+    expect(isValidUsername("")).toBe(false);
   });
 });

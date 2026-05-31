@@ -17,6 +17,7 @@ export interface Database {
           avatar_url: string | null;
           shipping_address: string | null;
           birthday: string | null;
+          username: string | null;
           created_at: string;
         };
         Insert: {
@@ -25,12 +26,14 @@ export interface Database {
           avatar_url?: string | null;
           shipping_address?: string | null;
           birthday?: string | null;
+          username?: string | null;
         };
         Update: {
           display_name?: string | null;
           avatar_url?: string | null;
           shipping_address?: string | null;
           birthday?: string | null;
+          username?: string | null;
         };
         Relationships: [];
       };
@@ -55,6 +58,7 @@ export interface Database {
           event_date: string | null;
           recurs_yearly: boolean;
           reveal_requested: boolean;
+          is_public: boolean;
           created_at: string;
         };
         Insert: {
@@ -64,12 +68,14 @@ export interface Database {
           title: string;
           event_date?: string | null;
           recurs_yearly?: boolean;
+          is_public?: boolean;
         };
         Update: {
           title?: string;
           event_date?: string | null;
           recurs_yearly?: boolean;
           reveal_requested?: boolean;
+          is_public?: boolean;
         };
         Relationships: [];
       };

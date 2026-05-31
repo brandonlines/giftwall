@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: light dark; }
+      body { width: 320px; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #fff; color: #1a1d21; }
+      @media (prefers-color-scheme: dark) { body { background: #181b20; color: #e8eaed; } .preview { background: #0f1115 !important; } }
+      header { padding: 14px 16px; font-weight: 700; font-size: 15px; border-bottom: 1px solid rgba(0,0,0,.08); }
+      .body { padding: 16px; }
+      .preview { display: flex; gap: 12px; align-items: center; background: #f6f7f9; border-radius: 12px; padding: 10px; margin-bottom: 14px; }
+      .preview img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: #e3e6ea; flex: none; }
+      .preview .t { font-size: 14px; font-weight: 600; line-height: 1.3; max-height: 3.9em; overflow: hidden; }
+      .preview .p { font-size: 13px; color: #5b636d; margin-top: 2px; }
+      button { width: 100%; padding: 12px; border: 0; border-radius: 12px; background: #2f6fed; color: #fff;
+        font-size: 15px; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: .5; cursor: default; }
+      .hint { font-size: 12px; color: #8a929c; margin-top: 10px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <header>🎁 Add to giftwall</header>
+    <div class="body">
+      <div class="preview">
+        <img id="thumb" alt="" />
+        <div>
+          <div class="t" id="title">Reading this page…</div>
+          <div class="p" id="price"></div>
+        </div>
+      </div>
+      <button id="add" disabled>Add to my wishlist</button>
+      <div class="hint" id="hint">Opens giftwall to pick a list.</div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

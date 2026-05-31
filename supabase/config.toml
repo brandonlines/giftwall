@@ -62,3 +62,8 @@ verify_jwt = false
 # Invoked by a Database Webhook on thank_yous INSERT. Auth is the shared
 # WEBHOOK_SECRET header (fails closed).
 verify_jwt = false
+
+[functions.public-profile]
+# Public "Linktree for gifts" page, opened in a browser. No JWT — it serves only
+# owner-published fields (handle, name, avatar, public-list items), never claims.
+verify_jwt = false

@@ -35,3 +35,20 @@ export function inviteMessage(groupName: string, code: string): string {
     `Or open the app and enter code ${code}.`
   );
 }
+
+// The product's canonical web home. Used for the public profile link even when
+// EXPO_PUBLIC_WEB_URL isn't set at build time, so a shared profile is always a
+// real https URL (the gift-well.ca/u/* path is served by the public-profile
+// Edge Function — see supabase/functions/public-profile).
+const CANONICAL_WEB = "https://www.gift-well.ca";
+
+/** Public profile page for a handle: https://www.gift-well.ca/u/<username>. */
+export function profileUrl(username: string): string {
+  const base = webBase() ?? CANONICAL_WEB;
+  return `${base}/u/${username}`;
+}
+
+/** Share-sheet body for a public profile. */
+export function profileShareMessage(username: string): string {
+  return `Here's my gift wishlist on giftwall 🎁\n${profileUrl(username)}`;
+}
