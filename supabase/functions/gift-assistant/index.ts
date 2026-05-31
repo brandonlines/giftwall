@@ -4,18 +4,19 @@
 // rate-limited to DAILY_CAP requests/day via the ai_requests table to keep LLM
 // cost bounded.
 //
-// Provider-agnostic by shape; ships with Anthropic. Set the ANTHROPIC_API_KEY
-// secret to enable — with no key the function returns 503 and the app shows a
-// friendly "not configured yet" message, so nothing breaks before it's wired.
+// Calls an LLM through the shared _shared/llm.ts client (OpenAI-compatible
+// /chat/completions; OpenRouter by default). With no key configured the function
+// returns 503 and the app shows a friendly "not set up yet" message, so nothing
+// breaks before it's wired.
 //
-// Secrets:  ANTHROPIC_API_KEY (required), ANTHROPIC_MODEL (optional)
+// Secrets:  OPENROUTER_API_KEY (or ANTHROPIC_API_KEY); LLM_MODEL / LLM_BASE_URL optional
 // Deploy:   npx supabase functions deploy gift-assistant
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { chat, llmConfigured } from "../_shared/llm.ts";
 
 const DAILY_CAP = 25;
-const MODEL = Deno.env.get("ANTHROPIC_MODEL")?.trim() || "claude-3-5-haiku-latest";
 
 const SYSTEM = [
   "You are a thoughtful, practical gift-shopping assistant.",
@@ -82,8 +83,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) {
+  if (!llmConfigured()) {
     return json({ error: "The gift assistant isn't set up yet. Check back soon!" }, 503);
   }
 
@@ -121,30 +121,16 @@ Deno.serve(async (req) => {
     // empty body is fine — we'll suggest crowd-pleasers
   }
 
-  // Call Anthropic.
+  // Call the LLM (OpenAI-compatible, via _shared/llm.ts).
   let ideas: Idea[] = [];
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1024,
-        system: SYSTEM,
-        messages: [{ role: "user", content: buildPrompt(body) }],
-      }),
-    });
-    if (!res.ok) {
-      return json({ error: "The assistant is busy right now. Please try again." }, 502);
-    }
-    const data = await res.json();
-    const text = Array.isArray(data?.content)
-      ? data.content.map((c: { text?: string }) => c?.text ?? "").join("")
-      : "";
+    const text = await chat(
+      [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: buildPrompt(body) },
+      ],
+      { max_tokens: 1024, temperature: 0.4 },
+    );
     ideas = parseIdeas(text);
   } catch {
     return json({ error: "Couldn't reach the assistant. Please try again." }, 502);
