@@ -18,10 +18,13 @@ npx supabase db push
 npx supabase secrets set WEBHOOK_SECRET=<a-long-random-string>
 #   …and add the same value as the x-webhook-secret header on the items webhook.
 
-# The gift-assistant function needs an LLM key — it returns 503 gracefully until
-# set, so this is safe to defer. Affiliate wrapping on the public page is also
-# optional (the app reads EXPO_PUBLIC_AMAZON_TAG; the function reads this):
-npx supabase secrets set ANTHROPIC_API_KEY=<your-anthropic-key>
+# The gift-assistant calls an OpenAI-compatible LLM via _shared/llm.ts
+# (OpenRouter by default). Set a key — it returns 503 gracefully until then, so
+# it's safe to defer. Affiliate wrapping on the public page is also optional
+# (the app reads EXPO_PUBLIC_AMAZON_TAG; the function reads AMAZON_ASSOC_TAG):
+npx supabase secrets set OPENROUTER_API_KEY=<your-openrouter-key>
+#   Optional overrides: LLM_MODEL (default meta-llama/llama-3.3-70b-instruct:free),
+#   LLM_BASE_URL (default https://openrouter.ai/api/v1)
 npx supabase secrets set AMAZON_ASSOC_TAG=<your-amazon-associates-tag>   # optional
 
 # Deploy the Edge Functions
