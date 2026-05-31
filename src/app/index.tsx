@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
+import { GiftLogo } from "@/components/gift-logo";
 import { useToast } from "@/components/ui/toast";
 import { groupsRepo } from "@/data/repositories/groups";
 import { pendingInvite } from "@/lib/pending-invite";
@@ -143,11 +143,13 @@ export default function GroupsScreen() {
               ))}
             </View>
           ) : (
-            <EmptyState
-              emoji="🎁"
-              title="No groups yet"
-              hint={t("groups.empty")}
-            />
+            <View style={styles.hero}>
+              <GiftLogo size={72} />
+              <Text style={styles.heroTitle}>Welcome to giftwall</Text>
+              <Text style={styles.heroHint}>
+                Create your first group below, invite your family, and start sharing wishlists — surprises stay secret. 🤫
+              </Text>
+            </View>
           )
         }
         renderItem={({ item }) => <GroupRow group={item} onOpen={onGroupOpen} />}
@@ -208,6 +210,9 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 8 },
     skeletons: { gap: 8 },
+    hero: { alignItems: "center", paddingVertical: 36, paddingHorizontal: 24, gap: 12 },
+    heroTitle: { fontSize: 22, fontWeight: "800", color: c.pageText },
+    heroHint: { fontSize: 15, color: c.pageTextMuted, textAlign: "center", lineHeight: 22, maxWidth: 340 },
     row: {
       flexDirection: "row",
       alignItems: "center",
