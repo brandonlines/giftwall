@@ -15,9 +15,9 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 - **Reserve for later** — a soft "thinking about this" signal that sits below a
   hard claim and never blocks one. New `reservations` table reuses the exact
   `can_see_claims_for_item` Surprise-Wall predicate (now in the RLS suite).
-- **Multiple photos per item** — items carry an ordered `images[]`; the first is
-  the cover (kept on `image_url` for back-compat). Add/remove several in the
-  item form; extra shots show in a strip on the list.
+- **Multiple photos per item** — a `photos[]` gallery alongside the `image_url`
+  cover; set a cover and extra shots in the item form, shown as a gallery on the
+  list. (Schema from `0031`; reservations layer cleanly on top.)
 - **Accessibility pass** — VoiceOver/TalkBack labels, roles and states across
   every screen; decorative art hidden; Dynamic Type capped on fixed-height text.
 - **Deep links + share intent** — env-aware https invite links (universal-link
@@ -45,10 +45,11 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 ## ⚠️ Operator to-do (not code)
 
 - **Apply migrations + redeploy** so the above goes live:
-  `npx supabase db push` (through 0030 — 0030 adds `reservations` + items.`images`);
-  `npx supabase functions deploy scrape-link send-push delete-account
-  occasion-reminders`; then `npx eas update --branch production`. Re-run
-  `npm run test:rls` after the push (it now also asserts the reservations wall).
+  `npx supabase db push` (through 0032 — 0030 item ordering, 0031 item photos,
+  0032 `reservations`); `npx supabase functions deploy scrape-link send-push
+  delete-account occasion-reminders`; then `npx eas update --branch production`.
+  Re-run `npm run test:rls` after the push (it now also asserts the reservations
+  wall).
 - **Set `WEBHOOK_SECRET`** (function secret + the webhook's `x-webhook-secret`
   header) — send-push and occasion-reminders both refuse to run without it.
 - **Schedule `occasion-reminders`** once a day (Supabase Scheduled Functions, or

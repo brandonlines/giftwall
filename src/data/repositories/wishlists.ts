@@ -103,10 +103,23 @@ export const wishlistsRepo = {
       .from("items")
       .select("*")
       .eq("list_id", listId)
-      .order("is_priority", { ascending: false }) // most-wanted first
+      // Manual order wins; never-reordered items (NULL position) fall to the end
+      // in creation order.
+      .order("position", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
     if (error) throw error;
     return data ?? [];
+  },
+
+  // Owner reorders their list: persist the new order as positions 0..n-1.
+  async reorder(orderedIds: string[]): Promise<void> {
+    const results = await Promise.all(
+      orderedIds.map((id, i) =>
+        supabase.from("items").update({ position: i }).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw failed.error;
   },
 
   async addItem(
@@ -115,7 +128,15 @@ export const wishlistsRepo = {
       Partial<
         Pick<
           Item,
-          "url" | "image_url" | "images" | "price_cents" | "currency" | "note" | "quantity" | "is_priority" | "is_group_gift"
+          | "url"
+          | "image_url"
+          | "price_cents"
+          | "currency"
+          | "note"
+          | "quantity"
+          | "is_priority"
+          | "is_group_gift"
+          | "photos"
         >
       >,
   ): Promise<void> {
@@ -141,13 +162,13 @@ export const wishlistsRepo = {
         | "title"
         | "url"
         | "image_url"
-        | "images"
         | "price_cents"
         | "currency"
         | "note"
         | "quantity"
         | "is_priority"
         | "is_group_gift"
+        | "photos"
       >
     >,
   ): Promise<void> {

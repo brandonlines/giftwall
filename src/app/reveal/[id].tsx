@@ -1,6 +1,16 @@
 import { useCallback, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,7 +20,7 @@ import { claimsRepo } from "@/data/repositories/claims";
 import { contributionsRepo } from "@/data/repositories/contributions";
 import { groupsRepo } from "@/data/repositories/groups";
 import { thanksRepo } from "@/data/repositories/thanks";
-import { useThemedStyles } from "@/theme/provider";
+import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Item } from "@/types/database";
 
@@ -27,10 +37,14 @@ const THANKS_MESSAGE = "Thank you so much! 🎁";
 export default function RevealScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const showToast = useToast();
   const [requested, setRequested] = useState(false);
   const [rows, setRows] = useState<RevealRow[]>([]);
   const [thanked, setThanked] = useState<Set<string>>(() => new Set());
+  const [sentMsg, setSentMsg] = useState<Map<string, string>>(() => new Map());
+  const [compose, setCompose] = useState<{ itemId: string; giver: Giver } | null>(null);
+  const [draft, setDraft] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -61,6 +75,7 @@ export default function RevealScreen() {
         .filter((r) => r.givers.length > 0 || r.contributors.length > 0);
       setRows(built);
       setThanked(new Set(sent.map((t) => thankKey(t.item_id, t.to_id))));
+      setSentMsg(new Map(sent.map((t) => [thankKey(t.item_id, t.to_id), t.message])));
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load", "error");
     } finally {
@@ -88,19 +103,28 @@ export default function RevealScreen() {
     }
   }
 
-  async function sendThanks(itemId: string, giver: Giver) {
+  // Open the composer prefilled with the existing note (or a friendly default).
+  function openCompose(itemId: string, giver: Giver) {
+    setDraft(sentMsg.get(thankKey(itemId, giver.id)) ?? THANKS_MESSAGE);
+    setCompose({ itemId, giver });
+  }
+
+  async function confirmThanks() {
+    if (!compose) return;
+    const { itemId, giver } = compose;
+    const message = draft.trim() || THANKS_MESSAGE;
     const k = thankKey(itemId, giver.id);
-    setThanked((s) => new Set(s).add(k)); // optimistic
+    setBusy(true);
     try {
-      await thanksRepo.send(itemId, giver.id, THANKS_MESSAGE);
+      await thanksRepo.send(itemId, giver.id, message);
+      setThanked((s) => new Set(s).add(k));
+      setSentMsg((m) => new Map(m).set(k, message));
+      setCompose(null);
       showToast(`Thanked ${giver.name} 🙏`, "success");
     } catch (e) {
-      setThanked((s) => {
-        const n = new Set(s);
-        n.delete(k);
-        return n;
-      });
       showToast(String((e as Error).message) || "Couldn't send thanks", "error");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -138,7 +162,7 @@ export default function RevealScreen() {
                 giver={g}
                 label={`🎁 from ${g.name}`}
                 isThanked={thanked.has(thankKey(r.item.id, g.id))}
-                onThank={sendThanks}
+                onThank={openCompose}
               />
             ))}
             {r.contributors.map((g) => (
@@ -148,7 +172,7 @@ export default function RevealScreen() {
                 giver={g}
                 label={`💛 ${g.name} chipped in`}
                 isThanked={thanked.has(thankKey(r.item.id, g.id))}
-                onThank={sendThanks}
+                onThank={openCompose}
               />
             ))}
           </Card>
@@ -167,6 +191,33 @@ export default function RevealScreen() {
           ) : null
         }
       />
+
+      <Modal
+        visible={!!compose}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCompose(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Thank {compose?.giver.name ?? "them"} 🙏</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={draft}
+              onChangeText={setDraft}
+              placeholder="Write a thank-you…"
+              placeholderTextColor={colors.placeholder}
+              multiline
+              maxLength={300}
+              autoFocus
+            />
+            <Button title="Send thanks" onPress={confirmThanks} loading={busy} />
+            <Pressable onPress={() => setCompose(null)} hitSlop={8} style={styles.modalCancel}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -190,11 +241,9 @@ function GiverRow({
       <Text style={styles.giver}>{label}</Text>
       <Pressable
         onPress={() => onThank(itemId, giver)}
-        disabled={isThanked}
         hitSlop={6}
         accessibilityRole="button"
-        accessibilityLabel={isThanked ? `Already thanked ${giver.name}` : `Say thanks to ${giver.name}`}
-        accessibilityState={{ disabled: isThanked }}
+        accessibilityLabel={`${isThanked ? "Edit thanks to" : "Say thanks to"} ${giver.name}`}
       >
         <Text style={[styles.thank, isThanked && styles.thankedText]}>
           {isThanked ? "Thanked ✓" : "Say thanks 🙏"}
@@ -222,4 +271,25 @@ const makeStyles = (c: ThemeColors) =>
     giver: { fontSize: 15, color: c.accent, fontWeight: "600", flex: 1 },
     thank: { fontSize: 14, fontWeight: "700", color: c.accent },
     thankedText: { color: c.textMuted },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      justifyContent: "center",
+      padding: 24,
+    },
+    modalCard: { backgroundColor: c.surface, borderRadius: 16, padding: 20, gap: 12 },
+    modalTitle: { fontSize: 17, fontWeight: "800", color: c.text },
+    modalInput: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      padding: 14,
+      fontSize: 16,
+      minHeight: 90,
+      textAlignVertical: "top",
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
+    modalCancel: { alignItems: "center", paddingVertical: 4 },
+    modalCancelText: { color: c.textMuted, fontWeight: "600" },
   });

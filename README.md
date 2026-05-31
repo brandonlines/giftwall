@@ -188,8 +188,9 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
   never blocks one; same Surprise Wall as claims (`reservations` table reuses
   `can_see_claims_for_item`). `src/data/repositories/reservations.ts`,
   `src/lib/reserve-state.ts`.
-- **Multiple photos per item** — ordered `images[]` (cover = first, mirrored to
-  `image_url`); manage several in the item form, view extras in a list strip.
+- **Multiple photos per item** — a `photos[]` gallery alongside the `image_url`
+  cover; manage both in the item form, view the gallery on the list (migration
+  `0031`).
 - **Auth** — email OTP, Sign in with Apple (native), Google (OAuth/PKCE).
   `src/app/sign-in.tsx`, `src/lib/auth.ts`, `src/providers/auth.tsx`.
 - **Screens** — groups home, group detail (wishlists + invite-code banner with
