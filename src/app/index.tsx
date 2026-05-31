@@ -20,7 +20,8 @@ import { pendingInvite } from "@/lib/pending-invite";
 import { pendingSharedUrl } from "@/lib/share-intent";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
-import type { Group } from "@/types/database";
+import type { EventType, Group } from "@/types/database";
+import { EVENT_TYPES } from "@/lib/event-types";
 import { t } from "@/i18n";
 
 export default function GroupsScreen() {
@@ -32,6 +33,7 @@ export default function GroupsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
+  const [eventType, setEventType] = useState<EventType>("general");
   const [joinId, setJoinId] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -79,8 +81,9 @@ export default function GroupsScreen() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const g = await groupsRepo.create(name.trim());
+      const g = await groupsRepo.create(name.trim(), eventType);
       setName("");
+      setEventType("general");
       router.push(`/group/${g.id}`);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't create group", "error");
@@ -164,6 +167,21 @@ export default function GroupsScreen() {
               onChangeText={setName}
               maxLength={60}
             />
+            <View style={styles.eventChips}>
+              {EVENT_TYPES.map((e) => (
+                <Pressable
+                  key={e.value}
+                  onPress={() => setEventType(e.value)}
+                  style={[styles.eventChip, eventType === e.value && styles.eventChipOn]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Event type: ${e.label}`}
+                >
+                  <Text style={[styles.eventChipText, eventType === e.value && styles.eventChipTextOn]}>
+                    {e.emoji} {e.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
             <Button title={t("groups.create")} onPress={createGroup} loading={busy} />
 
             <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
@@ -221,6 +239,18 @@ const makeStyles = (c: ThemeColors) =>
     rowTitle: { flex: 1, fontSize: 17, fontWeight: "600", color: c.text },
     rowChevron: { fontSize: 24, color: c.textMuted },
     footer: { marginTop: 24 },
+    eventChips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+    eventChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      backgroundColor: c.inputBg,
+    },
+    eventChipOn: { borderColor: c.accent, backgroundColor: c.accentSoft },
+    eventChipText: { fontSize: 13, fontWeight: "600", color: c.pageTextMuted },
+    eventChipTextOn: { color: c.onAccentSoft },
     sectionLabel: {
       fontSize: 13,
       fontWeight: "700",

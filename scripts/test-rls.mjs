@@ -234,6 +234,26 @@ async function run() {
     .select();
   check("A member CANNOT edit someone else's pledge", (carolEditsBob.data?.length ?? 0) === 0);
 
+  // --- Secret Santa (server-side, secret draw) -----------------------------
+  console.log("\nSecret Santa:");
+  const carolDraw = await carol.client.rpc("draw_secret_santa", { p_group_id: group.id });
+  check("Non-admin CANNOT draw names", !!carolDraw.error, "expected error");
+  const aliceDraw = await alice.client.rpc("draw_secret_santa", { p_group_id: group.id });
+  check("Admin can draw names", !aliceDraw.error, aliceDraw.error?.message);
+  const bobAssign = await bob.client.from("santa_assignments").select("*").eq("group_id", group.id);
+  check("Member sees ONLY their own assignment", (bobAssign.data?.length ?? 0) === 1);
+  check(
+    "Your assignment is yours and is never yourself",
+    bobAssign.data?.[0]?.giver_id === bob.id && bobAssign.data?.[0]?.receiver_id !== bob.id,
+  );
+  const malloryAssign = await mallory.client
+    .from("santa_assignments")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Outsider sees no assignments", (malloryAssign.data?.length ?? 0) === 0);
+  const drawnCheck = await bob.client.rpc("santa_is_drawn", { p_group_id: group.id });
+  check("santa_is_drawn() is true after the draw", drawnCheck.data === true);
+
   console.log("\nPer-item discussion:");
   const bobComment = await bob.client
     .from("item_comments")

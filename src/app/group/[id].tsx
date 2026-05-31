@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatCountdown, isValidDateStr } from "@/lib/dates";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
+import { santaRepo } from "@/data/repositories/santa";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -35,6 +36,9 @@ export default function GroupScreen() {
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [busy, setBusy] = useState(false);
+  const [santaReceiver, setSantaReceiver] = useState<string | null>(null);
+  const [santaDrawn, setSantaDrawn] = useState(false);
+  const [santaBusy, setSantaBusy] = useState(false);
   const showToast = useToast();
 
   const onListOpen = useCallback((listId: string) => router.push(`/list/${listId}`), [router]);
@@ -51,6 +55,21 @@ export default function GroupScreen() {
       setIsAdmin(
         members.some((m) => m.user_id === user?.id && m.role === "admin"),
       );
+      if (g.event_type === "secret_santa") {
+        const [assignment, drawn, withProfiles] = await Promise.all([
+          santaRepo.myAssignment(id),
+          santaRepo.isDrawn(id),
+          groupsRepo.membersWithProfiles(id),
+        ]);
+        setSantaDrawn(drawn);
+        const rec = assignment
+          ? withProfiles.find((m) => m.user_id === assignment.receiver_id)
+          : null;
+        setSantaReceiver(assignment ? rec?.displayName || "your match" : null);
+      } else {
+        setSantaDrawn(false);
+        setSantaReceiver(null);
+      }
     } catch (e) {
       Alert.alert("Couldn't load lists", String((e as Error).message));
     }
@@ -63,6 +82,19 @@ export default function GroupScreen() {
       Alert.alert("New code", `The invite code is now ${code}.`);
     } catch (e) {
       Alert.alert("Couldn't rotate code", String((e as Error).message));
+    }
+  }
+
+  async function drawSecretSanta() {
+    setSantaBusy(true);
+    try {
+      await santaRepo.draw(id);
+      showToast("Names drawn! 🤫", "success");
+      await load();
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't draw names", "error");
+    } finally {
+      setSantaBusy(false);
     }
   }
 
@@ -155,6 +187,37 @@ export default function GroupScreen() {
                   </Pressable>
                 )}
               </View>
+              {group.event_type === "secret_santa" ? (
+                <Card style={styles.santaCard}>
+                  <Text style={styles.santaTitle}>🤫 Secret Santa</Text>
+                  {santaReceiver ? (
+                    <Text style={styles.santaText}>
+                      You&apos;re buying for:{" "}
+                      <Text style={styles.santaName}>{santaReceiver}</Text>
+                    </Text>
+                  ) : santaDrawn ? (
+                    <Text style={styles.santaText}>
+                      {isAdmin
+                        ? "Names are drawn, but you're not in this draw — re-draw to include everyone."
+                        : "Names are drawn, but you're not in this one — ask the admin to re-draw."}
+                    </Text>
+                  ) : (
+                    <Text style={styles.santaText}>
+                      {isAdmin
+                        ? "Draw names so everyone secretly gets one person to buy for."
+                        : "Names haven't been drawn yet."}
+                    </Text>
+                  )}
+                  {isAdmin ? (
+                    <Button
+                      title={santaDrawn ? "Re-draw names" : "Draw names"}
+                      variant="secondary"
+                      onPress={drawSecretSanta}
+                      loading={santaBusy}
+                    />
+                  ) : null}
+                </Card>
+              ) : null}
             </View>
           ) : null
         }
@@ -268,4 +331,8 @@ const makeStyles = (c: ThemeColors) =>
     linkRow: { flexDirection: "row", gap: 20 },
     membersLink: { paddingVertical: 10, paddingHorizontal: 4, marginBottom: 4 },
     membersText: { color: c.accent, fontWeight: "600" },
+    santaCard: { padding: 16, marginTop: 8, gap: 8 },
+    santaTitle: { fontSize: 16, fontWeight: "800", color: c.text },
+    santaText: { fontSize: 15, color: c.text, lineHeight: 21 },
+    santaName: { fontWeight: "800", color: c.accent },
   });
