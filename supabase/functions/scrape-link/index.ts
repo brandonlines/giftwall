@@ -157,10 +157,39 @@ function parsePriceCents(raw: string | null): number | null {
   return Math.round(parseFloat(m[1]) * 100);
 }
 
-// schema.org Product/Offer JSON-LD is how MOST retailers expose price (OG price
-// meta tags are rare). Walk every ld+json block, flatten @graph/arrays, and pull
-// the first offers.price (+ priceCurrency).
-function fromJsonLd(html: string): { price: number | null; currency: string | null } {
+// schema.org `image` can be a URL string, an array, or an ImageObject ({url}).
+// Pull the first usable URL.
+function firstImage(v: unknown): string | null {
+  if (!v) return null;
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      const r = firstImage(x);
+      if (r) return r;
+    }
+    return null;
+  }
+  if (typeof v === "object") {
+    const u = (v as Record<string, unknown>).url;
+    if (typeof u === "string") return u;
+  }
+  return null;
+}
+
+// schema.org Product/Offer JSON-LD is how MOST retailers expose price AND the
+// product image (OG tags are often missing). Walk every ld+json block, flatten
+// @graph/arrays, and pull the first offers.price (+ priceCurrency) and a Product
+// image (preferring a Product node, with any image as a fallback).
+function fromJsonLd(
+  html: string,
+): { price: number | null; currency: string | null; image: string | null } {
+  const out: { price: number | null; currency: string | null; image: string | null } = {
+    price: null,
+    currency: null,
+    image: null,
+  };
+  let fallbackImage: string | null = null;
+
   const blocks = html.matchAll(
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   );
@@ -181,26 +210,38 @@ function fromJsonLd(html: string): { price: number | null; currency: string | nu
       }
     };
     collect(data);
+
     for (const node of nodes) {
-      const offers = (node as Record<string, unknown>).offers;
-      const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
-      for (const offer of list) {
-        const o = (offer ?? {}) as Record<string, any>;
-        const spec = (o.priceSpecification ?? {}) as Record<string, any>;
-        const price = o.price ?? spec.price ?? o.lowPrice;
-        const cur = o.priceCurrency ?? spec.priceCurrency;
-        if (price != null && price !== "") {
-          return { price: parsePriceCents(String(price)), currency: typeof cur === "string" ? cur : null };
+      const o = node as Record<string, any>;
+      const type = o["@type"];
+      const isProduct = type === "Product" || (Array.isArray(type) && type.includes("Product"));
+      const img = firstImage(o.image);
+      if (img && !fallbackImage) fallbackImage = img;
+      if (img && isProduct && !out.image) out.image = img;
+
+      if (out.price == null) {
+        const offers = o.offers;
+        const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
+        for (const offer of list) {
+          const off = (offer ?? {}) as Record<string, any>;
+          const spec = (off.priceSpecification ?? {}) as Record<string, any>;
+          const price = off.price ?? spec.price ?? off.lowPrice;
+          if (price != null && price !== "") {
+            out.price = parsePriceCents(String(price));
+            const cur = off.priceCurrency ?? spec.priceCurrency;
+            out.currency = typeof cur === "string" ? cur : null;
+            break;
+          }
         }
-      }
-      const np = (node as Record<string, any>).price;
-      if (np != null && np !== "") {
-        const nc = (node as Record<string, any>).priceCurrency;
-        return { price: parsePriceCents(String(np)), currency: typeof nc === "string" ? nc : null };
+        if (out.price == null && o.price != null && o.price !== "") {
+          out.price = parsePriceCents(String(o.price));
+          out.currency = typeof o.priceCurrency === "string" ? o.priceCurrency : null;
+        }
       }
     }
   }
-  return { price: null, currency: null };
+  if (!out.image) out.image = fallbackImage;
+  return out;
 }
 
 // Microdata fallback: <... itemprop="price" content="...">.
@@ -252,7 +293,6 @@ Deno.serve(async (req) => {
       metaContent(html, "og:title") ??
       html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ??
       null;
-    const image = metaContent(html, "og:image");
     // Price/currency: OpenGraph first, then JSON-LD (most retailers), then microdata.
     const ogPrice = parsePriceCents(
       metaContent(html, "og:price:amount") ?? metaContent(html, "product:price:amount"),
@@ -263,6 +303,9 @@ Deno.serve(async (req) => {
     const micro = microdataPrice(html);
     const price_cents = ogPrice ?? ld.price ?? micro.price;
     const currency = ogCurrency ?? ld.currency ?? micro.currency;
+    // Image: OpenGraph first, then JSON-LD Product image, then Twitter card.
+    const image =
+      metaContent(html, "og:image") ?? ld.image ?? metaContent(html, "twitter:image");
 
     return json({ title, image, price_cents, currency });
   } catch (e) {
