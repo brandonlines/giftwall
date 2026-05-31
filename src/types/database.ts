@@ -115,6 +115,12 @@ export interface Database {
         Update: { amount_cents?: number; note?: string | null };
         Relationships: [];
       };
+      reactions: {
+        Row: { item_id: string; user_id: string; emoji: string; created_at: string };
+        Insert: { item_id: string; user_id: string; emoji: string };
+        Update: { emoji?: string };
+        Relationships: [];
+      };
       push_tokens: {
         Row: { token: string; user_id: string; platform: string | null; updated_at: string };
         Insert: { token: string; user_id: string; platform?: string | null };
@@ -189,6 +195,7 @@ export type Wishlist = T["wishlists"]["Row"];
 export type Item = T["items"]["Row"];
 export type Claim = T["claims"]["Row"];
 export type Contribution = T["contributions"]["Row"];
+export type Reaction = T["reactions"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
