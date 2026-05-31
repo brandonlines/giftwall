@@ -271,6 +271,14 @@ export default function GroupScreen() {
                 >
                   <Text style={styles.membersText}>Activity</Text>
                 </Pressable>
+                <Pressable
+                  style={styles.membersLink}
+                  onPress={() => router.push(`/group-chat/${id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open group chat"
+                >
+                  <Text style={styles.membersText}>Chat</Text>
+                </Pressable>
                 {isAdmin && (
                   <Pressable
                     style={styles.membersLink}

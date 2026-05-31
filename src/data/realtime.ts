@@ -127,3 +127,19 @@ export function subscribeToSanta(groupId: string, onChange: () => void) {
     supabase.removeChannel(channel);
   };
 }
+
+// Live group chat for one group. Gated by RLS on membership, so every member
+// (recipient included) sees new messages as they land — it's general coordination.
+export function subscribeToGroupMessages(groupId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`group-messages-${groupId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "group_messages", filter: `group_id=eq.${groupId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
