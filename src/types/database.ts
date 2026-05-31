@@ -32,9 +32,9 @@ export interface Database {
         Relationships: [];
       };
       groups: {
-        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; created_at: string };
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; created_at: string };
         Insert: { id?: string; name: string; created_by: string; event_type?: EventType };
-        Update: { name?: string; event_type?: EventType };
+        Update: { name?: string; event_type?: EventType; background_url?: string | null };
         Relationships: [];
       };
       memberships: {
@@ -237,6 +237,7 @@ export interface Database {
       rotate_invite_code: { Args: { p_group_id: string }; Returns: string };
       draw_secret_santa: { Args: { p_group_id: string }; Returns: undefined };
       santa_is_drawn: { Args: { p_group_id: string }; Returns: boolean };
+      set_group_background: { Args: { p_group_id: string; p_url: string | null }; Returns: undefined };
     };
     Enums: {
       claim_status: ClaimStatus;

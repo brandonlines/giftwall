@@ -398,6 +398,24 @@ async function run() {
     .eq("user_id", alice.id);
   check("Cannot read another user's notification prefs", (bobReadsAlicePref.data?.length ?? 0) === 0);
 
+  console.log("\nGroup cover background:");
+  const bobBg = await bob.client.rpc("set_group_background", {
+    p_group_id: group.id,
+    p_url: "https://example.com/bg.jpg",
+  });
+  check("Any member can set the group background", !bobBg.error, bobBg.error?.message);
+  const bgAfter = await bob.client
+    .from("groups")
+    .select("background_url")
+    .eq("id", group.id)
+    .single();
+  check("Background URL is recorded", bgAfter.data?.background_url === "https://example.com/bg.jpg");
+  const malloryBg = await mallory.client.rpc("set_group_background", {
+    p_group_id: group.id,
+    p_url: "https://evil.example/x.jpg",
+  });
+  check("Outsider CANNOT set the group background", !!malloryBg.error, "expected member-check error");
+
   // --- admin management ----------------------------------------------------
   console.log("\nAdmin member management:");
   const bobPromote = await bob.client
