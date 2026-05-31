@@ -29,6 +29,7 @@ import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
 import { scrapeRepo } from "@/data/repositories/scrape";
+import { groupsRepo } from "@/data/repositories/groups";
 import { subscribeToClaims } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
@@ -69,6 +70,7 @@ export default function ListScreen() {
   const [seedTitle, setSeedTitle] = useState<string | undefined>();
   const [eventDateText, setEventDateText] = useState("");
   const [recursYearly, setRecursYearly] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [priceChanged, setPriceChanged] = useState<Set<string>>(() => new Set());
 
   // Keep a ref to claims so the toggle handlers can stay stable (useCallback
@@ -106,6 +108,11 @@ export default function ListScreen() {
       setEventDateText(w.event_date ?? "");
       setRecursYearly(w.recurs_yearly);
       setItems(its);
+      // The group's shared cover, fetched non-blocking (decorative).
+      void groupsRepo
+        .get(w.group_id)
+        .then((g) => setCoverUrl(g.background_url))
+        .catch(() => {});
       await refreshClaims(its);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load list", "error");
@@ -319,6 +326,7 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
+      {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.listCover} /> : null}
       {list?.event_date && occasionCountdown(list.event_date, list.recurs_yearly) ? (
         <View style={styles.countdownBanner}>
           <Text style={styles.countdownText}>
@@ -681,6 +689,13 @@ const ItemRow = memo(function ItemRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 12 },
+    listCover: {
+      height: 104,
+      marginHorizontal: 16,
+      marginTop: 12,
+      borderRadius: 12,
+      backgroundColor: c.accentSoft,
+    },
     countdownBanner: {
       marginHorizontal: 16,
       marginTop: 12,
