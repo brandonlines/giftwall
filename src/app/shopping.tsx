@@ -108,14 +108,24 @@ export default function ShoppingScreen() {
         options={{
           title: "Shopping",
           headerRight: () => (
-            <Pressable
-              hitSlop={10}
-              onPress={() => router.push("/thanks")}
-              accessibilityRole="button"
-              accessibilityLabel="Thank-you notes"
-            >
-              <Text style={styles.headerLink} maxFontSizeMultiplier={1.4}>🙏 Thanks</Text>
-            </Pressable>
+            <View style={styles.headerRight}>
+              <Pressable
+                hitSlop={10}
+                onPress={() => router.push("/gift-history")}
+                accessibilityRole="button"
+                accessibilityLabel="Gift history"
+              >
+                <Text style={styles.headerLink} maxFontSizeMultiplier={1.4}>🎁 History</Text>
+              </Pressable>
+              <Pressable
+                hitSlop={10}
+                onPress={() => router.push("/thanks")}
+                accessibilityRole="button"
+                accessibilityLabel="Thank-you notes"
+              >
+                <Text style={styles.headerLink} maxFontSizeMultiplier={1.4}>🙏 Thanks</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -242,6 +252,7 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
     headerLink: { color: c.headerTint, fontWeight: "700", fontSize: 15 },
+    headerRight: { flexDirection: "row", gap: 16, alignItems: "center" },
     summaryCard: { padding: 16, marginBottom: 12, gap: 4 },
     summaryTotal: { fontSize: 18, fontWeight: "800", color: c.text },
     summaryBreakdown: { fontSize: 13, color: c.textMuted },
