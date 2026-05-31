@@ -29,6 +29,7 @@ export type ItemFormValue = {
   note: string | null;
   quantity: number;
   is_priority: boolean;
+  is_group_gift: boolean;
 };
 
 // Shared form for creating and editing an item. Handles link scraping and
@@ -58,6 +59,7 @@ export function ItemForm({
   const [imageUrl, setImageUrl] = useState<string | null>(initial?.image_url ?? null);
   const [currency, setCurrency] = useState<string | null>(initial?.currency ?? null);
   const [isPriority, setIsPriority] = useState(initial?.is_priority ?? false);
+  const [isGroupGift, setIsGroupGift] = useState(initial?.is_group_gift ?? false);
   const [scraping, setScraping] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,6 +131,7 @@ export function ItemForm({
     setImageUrl(null);
     setCurrency(null);
     setIsPriority(false);
+    setIsGroupGift(false);
   }
 
   async function submit() {
@@ -161,6 +164,7 @@ export function ItemForm({
             note: null,
             quantity: 1,
             is_priority: false,
+            is_group_gift: false,
           });
         }
         resetForm();
@@ -182,6 +186,7 @@ export function ItemForm({
         note: note.trim() ? clampLen(note, LIMITS.note) : null,
         quantity: clampQuantity(quantityText),
         is_priority: isPriority,
+        is_group_gift: isGroupGift,
       });
     } finally {
       setSaving(false);
@@ -282,6 +287,15 @@ export function ItemForm({
       >
         <Text style={styles.priorityText}>
           {isPriority ? "★ Most wanted" : "☆ Mark as most wanted"}
+        </Text>
+      </Pressable>
+
+      <Pressable
+        style={[styles.priorityRow, isGroupGift && styles.priorityRowOn]}
+        onPress={() => setIsGroupGift((v) => !v)}
+      >
+        <Text style={styles.priorityText}>
+          {isGroupGift ? "🎁 Group gift — members pool together" : "🎁 Make this a group gift"}
         </Text>
       </Pressable>
 

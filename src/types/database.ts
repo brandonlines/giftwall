@@ -59,6 +59,7 @@ export interface Database {
           note: string | null;
           quantity: number;
           is_priority: boolean;
+          is_group_gift: boolean;
           created_at: string;
         };
         Insert: {
@@ -72,6 +73,7 @@ export interface Database {
           note?: string | null;
           quantity?: number;
           is_priority?: boolean;
+          is_group_gift?: boolean;
         };
         Update: {
           title?: string;
@@ -82,6 +84,7 @@ export interface Database {
           note?: string | null;
           quantity?: number;
           is_priority?: boolean;
+          is_group_gift?: boolean;
         };
         Relationships: [];
       };

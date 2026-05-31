@@ -506,6 +506,7 @@ const ItemRow = memo(function ItemRow({
         {/* Owner: manage the item. Surprise Wall hides all claim state from them. */}
         {isOwner ? (
           <View style={styles.ownerActions}>
+            {item.is_group_gift && <Text style={styles.groupGiftTag}>🎁 Group gift</Text>}
             <Pressable
               onPress={() => onEdit(item)}
               hitSlop={8}
@@ -535,6 +536,17 @@ const ItemRow = memo(function ItemRow({
           </View>
         ) : (
           <View style={{ gap: 6 }}>
+            {item.is_group_gift ? (
+              <Pressable
+                onPress={() => onChipIn(item)}
+                style={({ pressed }) => [styles.claimBtn, styles.groupGiftBtn, pressed && styles.pressedScale]}
+                accessibilityRole="button"
+                accessibilityLabel={`Chip in on ${item.title}`}
+              >
+                <Text style={styles.groupGiftBtnText}>🎁 Group gift — chip in together</Text>
+              </Pressable>
+            ) : (
+              <>
             {multi && (mine || count > 0) && (
               <Text style={styles.countLabel}>{countLabel}</Text>
             )}
@@ -584,6 +596,8 @@ const ItemRow = memo(function ItemRow({
                 </Text>
               </Pressable>
             )}
+              </>
+            )}
             <Pressable
               onPress={() => onDiscuss(item)}
               hitSlop={6}
@@ -592,15 +606,6 @@ const ItemRow = memo(function ItemRow({
               accessibilityLabel={`Discuss ${item.title}`}
             >
               <Text style={styles.discuss}>💬 Discuss</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => onChipIn(item)}
-              hitSlop={6}
-              style={styles.discussWrap}
-              accessibilityRole="button"
-              accessibilityLabel={`Chip in on ${item.title}`}
-            >
-              <Text style={styles.discuss}>🎁 Group gift</Text>
             </Pressable>
           </View>
         )}
@@ -650,6 +655,9 @@ const makeStyles = (c: ThemeColors) =>
       color: c.inputText,
     },
     pressedScale: { transform: [{ scale: 0.97 }], opacity: 0.9 },
+    groupGiftBtn: { backgroundColor: c.accentSoft, borderWidth: 1, borderColor: c.accent },
+    groupGiftBtnText: { color: c.onAccentSoft, fontWeight: "700", textAlign: "center" },
+    groupGiftTag: { fontSize: 13, fontWeight: "700", color: c.accent, alignSelf: "center" },
     item: { flexDirection: "row", gap: 12, padding: 12 },
     thumb: { width: 64, height: 64, borderRadius: 8, backgroundColor: c.border },
     thumbEmpty: { alignItems: "center", justifyContent: "center" },
