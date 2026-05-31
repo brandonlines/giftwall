@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { groupsRepo, type MemberWithProfile } from "@/data/repositories/groups";
+import { occasionCountdown } from "@/lib/dates";
 import { useAuth } from "@/providers/auth";
 import { useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -95,6 +96,7 @@ export default function MembersScreen() {
           const isMe = item.user_id === user?.id;
           const canManage = isAdmin && !isMe;
           const displayName = (item.displayName ?? "Unnamed") + (isMe ? " (You)" : "");
+          const birthdayLabel = item.birthday ? occasionCountdown(item.birthday, true) : null;
           return (
             <Card
               style={styles.row}
@@ -133,6 +135,9 @@ export default function MembersScreen() {
                     📦 {item.shippingAddress}
                   </Text>
                 ) : null}
+                {birthdayLabel ? (
+                  <Text style={styles.birthday}>🎂 Birthday {birthdayLabel}</Text>
+                ) : null}
               </View>
               {item.role === "admin" && (
                 <Text style={styles.adminTag} maxFontSizeMultiplier={1.4}>Admin</Text>
@@ -170,6 +175,7 @@ const makeStyles = (c: ThemeColors) =>
     nameCol: { flex: 1 },
     name: { fontSize: 16, fontWeight: "600", color: c.text },
     address: { fontSize: 13, color: c.textMuted, marginTop: 2 },
+    birthday: { fontSize: 13, color: c.accent, fontWeight: "600", marginTop: 2 },
     adminTag: {
       fontSize: 12,
       fontWeight: "700",

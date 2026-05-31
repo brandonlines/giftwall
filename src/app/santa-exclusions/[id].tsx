@@ -7,7 +7,6 @@ import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
 import { groupsRepo, type MemberWithProfile } from "@/data/repositories/groups";
 import { santaRepo } from "@/data/repositories/santa";
-import { formatPrice } from "@/lib/format";
 import { parsePriceToCents } from "@/lib/validation";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
