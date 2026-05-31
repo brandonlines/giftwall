@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import * as Updates from "expo-updates";
 import { AuthProvider, useAuth } from "@/providers/auth";
 import { ThemeProvider, useTheme } from "@/theme/provider";
 import { ToastProvider } from "@/components/ui/toast";
@@ -12,7 +13,30 @@ import { initMonitoring } from "@/lib/monitoring";
 // Start crash reporting before anything renders (no-ops without a DSN).
 initMonitoring();
 
+// On a release build, fetch any pending OTA update and apply it during the
+// launch window. expo-updates' default only *applies* an update on the launch
+// AFTER it downloads (so testers would need two cold starts); this makes it land
+// on the first open. We only reload if the whole check+download finishes within
+// a few seconds of launch, so a user who's already navigating is never
+// interrupted mid-session (the update then applies on the next launch as usual).
+async function applyPendingUpdate() {
+  if (__DEV__ || !Updates.isEnabled) return;
+  const deadline = Date.now() + 6000;
+  try {
+    const check = await Updates.checkForUpdateAsync();
+    if (!check.isAvailable) return;
+    await Updates.fetchUpdateAsync();
+    if (Date.now() < deadline) await Updates.reloadAsync();
+  } catch {
+    // no update server / offline — keep the embedded bundle
+  }
+}
+
 export default function RootLayout() {
+  useEffect(() => {
+    void applyPendingUpdate();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
