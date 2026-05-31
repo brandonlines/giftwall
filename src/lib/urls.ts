@@ -15,3 +15,10 @@ export function splitUrls(text: string): string[] {
   }
   return out;
 }
+
+// The first safe http(s) URL embedded in a blob of text, or null. Lets a link
+// shared into the app — often wrapped in chatter like "check this out <url>" —
+// drop into the add form clean instead of pasting the whole sentence.
+export function firstUrl(text: string): string | null {
+  return splitUrls(text)[0] ?? null;
+}

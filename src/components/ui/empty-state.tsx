@@ -14,8 +14,12 @@ export function EmptyState({
   const { colors } = useTheme();
   return (
     <View style={styles.wrap}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.title, { color: colors.pageText }]}>{title}</Text>
+      <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+        {emoji}
+      </Text>
+      <Text style={[styles.title, { color: colors.pageText }]} accessibilityRole="header">
+        {title}
+      </Text>
       {hint ? <Text style={[styles.hint, { color: colors.pageTextMuted }]}>{hint}</Text> : null}
     </View>
   );

@@ -138,13 +138,18 @@ export default function RevealScreen() {
         ListHeaderComponent={
           <Card style={styles.toggleCard}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.toggleTitle}>See who gave what</Text>
+              <Text style={styles.toggleTitle} accessibilityRole="header">See who gave what</Text>
               <Text style={styles.toggleHint}>
                 Off keeps the surprise. On, each gift appears only once its giver
                 also chooses to reveal it — then you can say thanks.
               </Text>
             </View>
-            <Switch value={requested} onValueChange={toggleRequested} disabled={busy} />
+            <Switch
+              value={requested}
+              onValueChange={toggleRequested}
+              disabled={busy}
+              accessibilityLabel="See who gave what"
+            />
           </Card>
         }
         renderItem={({ item: r }) => (

@@ -179,6 +179,18 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
 
 ## What's built
 
+- **Home dashboard** — the groups screen surfaces the soonest occasions across
+  every group with an "unclaimed" nudge for others' lists (never your own — the
+  Surprise Wall), plus a search entry. `src/data/repositories/dashboard.ts`.
+- **Global search** — gifts + people across all your groups, RLS-scoped.
+  `src/app/search.tsx`, `src/data/repositories/search.ts`.
+- **Reserve for later** — a soft-interest toggle that sits below a hard claim and
+  never blocks one; same Surprise Wall as claims (`reservations` table reuses
+  `can_see_claims_for_item`). `src/data/repositories/reservations.ts`,
+  `src/lib/reserve-state.ts`.
+- **Multiple photos per item** — a `photos[]` gallery alongside the `image_url`
+  cover; manage both in the item form, view the gallery on the list (migration
+  `0031`).
 - **Auth** — email OTP, Sign in with Apple (native), Google (OAuth/PKCE).
   `src/app/sign-in.tsx`, `src/lib/auth.ts`, `src/providers/auth.tsx`.
 - **Screens** — groups home, group detail (wishlists + invite-code banner with
@@ -332,6 +344,31 @@ in a simulator yet — that needs a linked Supabase project and a dev build.
   - Web favicon: `assets/images/favicon.png`.
   Generate from one source with `npx expo-optimize` / the Expo asset tooling, or
   design 1024² art and let EAS derive the rest.
+
+## Deep links
+
+Invite links are built in one place — `src/lib/links.ts` (`inviteUrl` /
+`inviteMessage`), used by the group screen and the QR screen. The shape depends
+on `EXPO_PUBLIC_WEB_URL`:
+
+- **Unset** → `giftwall://join/<CODE>` (custom scheme). Only opens on a device
+  that already has the app; in a browser or for a non-installer it dead-ends.
+- **Set** (e.g. `https://giftwall.app`) → `https://giftwall.app/join/<CODE>`.
+  A recipient without the app lands on the **web app's own `/join/[code]`
+  route** instead of nothing, and once you do the two operator steps below the
+  same link becomes a true **Universal Link (iOS) / App Link (Android)** that
+  opens the installed app directly:
+
+  1. **Host the association files** at that origin:
+     `/.well-known/apple-app-site-association` (the `com.giftwall.app`
+     app ID + `/join/*` paths) and `/.well-known/assetlinks.json` (the Android
+     package + signing-cert SHA-256).
+  2. **Add the domain to native config** — `ios.associatedDomains:
+     ["applinks:giftwall.app"]` and an Android `intentFilters` entry for the
+     `https` host — then rebuild (links can't be added over-the-air).
+
+Until then, set `EXPO_PUBLIC_WEB_URL` anyway: the graceful web-app fallback is
+already a strict upgrade over the dead custom-scheme link.
 
 ## Share extension (native)
 

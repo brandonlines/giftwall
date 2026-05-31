@@ -79,6 +79,22 @@ export function subscribeToReactions(itemId: string, onChange: () => void) {
   };
 }
 
+// Live reservations (soft interest). RLS-enforced exactly like claims, so the
+// recipient never receives reservation events for their own list.
+export function subscribeToReservations(onChange: () => void) {
+  const channel = supabase
+    .channel("reservations-changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reservations" },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
 // Live group-gift contributions for one item. RLS-enforced — the recipient
 // never receives events for their own item, so the Surprise Wall holds.
 export function subscribeToContributions(itemId: string, onChange: () => void) {

@@ -138,7 +138,10 @@ export default function SantaExclusionsScreen() {
             <Card
               style={[styles.memberRow, selected && styles.memberRowSel]}
               onPress={() => tapMember(item.user_id)}
-              accessibilityLabel={item.displayName ?? "Unnamed"}
+              accessibilityLabel={
+                (item.displayName ?? "Unnamed") + (selected ? ", first pick selected" : "")
+              }
+              accessibilityState={{ selected }}
             >
               <Text style={[styles.memberName, selected && styles.memberNameSel]}>
                 {item.displayName ?? "Unnamed"}

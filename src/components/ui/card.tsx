@@ -3,6 +3,7 @@ import {
   Pressable,
   StyleSheet,
   View,
+  type AccessibilityState,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
@@ -17,11 +18,13 @@ export function Card({
   style,
   onPress,
   accessibilityLabel,
+  accessibilityState,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   accessibilityLabel?: string;
+  accessibilityState?: AccessibilityState;
 }) {
   const { colors } = useTheme();
 
@@ -52,6 +55,7 @@ export function Card({
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={accessibilityState}
         style={({ pressed }) => [base, style, pressed && styles.pressed]}
       >
         {body}

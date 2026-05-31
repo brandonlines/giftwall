@@ -16,11 +16,11 @@ export default function LegalScreen() {
     <Screen>
       <Stack.Screen options={{ title }} />
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.heading}>{title}</Text>
+        <Text style={styles.heading} accessibilityRole="header">{title}</Text>
         <Text style={styles.updated}>Last updated {LAST_UPDATED}</Text>
         {sections.map((s) => (
           <View key={s.title}>
-            <Text style={styles.section}>{s.title}</Text>
+            <Text style={styles.section} accessibilityRole="header">{s.title}</Text>
             {s.body.map((p, j) => (
               <Text key={j} style={styles.body}>
                 {p}

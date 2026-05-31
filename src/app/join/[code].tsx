@@ -49,7 +49,7 @@ export default function JoinScreen() {
           </Text>
         ) : (
           <>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Joining your group" />
             <Text style={{ color: colors.pageTextMuted, marginTop: 12 }}>
               Joining your group…
             </Text>

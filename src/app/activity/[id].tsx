@@ -97,7 +97,9 @@ export default function ActivityScreen() {
         }
         renderItem={({ item }) => (
           <Card style={styles.row}>
-            <Text style={styles.icon}>{iconFor(item)}</Text>
+            <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">
+              {iconFor(item)}
+            </Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.text}>{describe(item)}</Text>
               <Text style={styles.time}>{relativeTime(item.created_at)}</Text>

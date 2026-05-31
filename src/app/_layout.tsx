@@ -89,6 +89,7 @@ function RootNavigator() {
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="preview" options={{ title: "Theme Preview" }} />
         <Stack.Screen name="index" options={{ title: "Your Groups" }} />
+        <Stack.Screen name="search" options={{ title: "Search" }} />
         <Stack.Screen name="shopping" options={{ title: "Shopping" }} />
         <Stack.Screen name="scan" options={{ title: "Scan a barcode" }} />
         <Stack.Screen name="group/[id]" options={{ title: "Group" }} />

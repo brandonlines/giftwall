@@ -101,7 +101,12 @@ export default function ItemCommentsScreen() {
               <View style={styles.commentHead}>
                 <Text style={styles.author}>{item.authorName}</Text>
                 {item.isMine && (
-                  <Pressable onPress={() => confirmRemove(item)} hitSlop={8}>
+                  <Pressable
+                    onPress={() => confirmRemove(item)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete your comment"
+                  >
                     <Text style={styles.delete}>Delete</Text>
                   </Pressable>
                 )}
@@ -119,6 +124,7 @@ export default function ItemCommentsScreen() {
             onChangeText={setDraft}
             maxLength={1000}
             multiline
+            accessibilityLabel="Add a comment"
           />
           <Button title="Post" onPress={send} loading={sending} />
         </View>

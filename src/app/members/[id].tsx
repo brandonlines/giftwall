@@ -94,15 +94,30 @@ export default function MembersScreen() {
         renderItem={({ item }) => {
           const isMe = item.user_id === user?.id;
           const canManage = isAdmin && !isMe;
+          const displayName = (item.displayName ?? "Unnamed") + (isMe ? " (You)" : "");
           return (
             <Card
               style={styles.row}
               onPress={canManage ? () => manageMember(item) : undefined}
+              accessibilityLabel={
+                canManage
+                  ? `Manage ${displayName}${item.role === "admin" ? ", admin" : ""}`
+                  : undefined
+              }
             >
               {item.avatarUrl ? (
-                <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
+                <Image
+                  source={{ uri: item.avatarUrl }}
+                  style={styles.avatar}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
               ) : (
-                <View style={[styles.avatar, styles.avatarEmpty]}>
+                <View
+                  style={[styles.avatar, styles.avatarEmpty]}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                >
                   <Text style={styles.avatarInitial}>
                     {(item.displayName ?? "?").charAt(0).toUpperCase()}
                   </Text>
@@ -119,8 +134,14 @@ export default function MembersScreen() {
                   </Text>
                 ) : null}
               </View>
-              {item.role === "admin" && <Text style={styles.adminTag}>Admin</Text>}
-              {canManage && <Text style={styles.manage}>›</Text>}
+              {item.role === "admin" && (
+                <Text style={styles.adminTag} maxFontSizeMultiplier={1.4}>Admin</Text>
+              )}
+              {canManage && (
+                <Text style={styles.manage} accessibilityElementsHidden importantForAccessibility="no">
+                  ›
+                </Text>
+              )}
             </Card>
           );
         }}

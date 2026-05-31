@@ -124,7 +124,11 @@ export default function ChipInScreen() {
           )}
 
           {!loaded ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: 18 }} />
+            <ActivityIndicator
+              color={colors.primary}
+              style={{ marginVertical: 18 }}
+              accessibilityLabel="Loading contributions"
+            />
           ) : (
             <>
               {targetCents ? (
@@ -165,6 +169,12 @@ export default function ChipInScreen() {
               hitSlop={8}
               style={styles.revealWrap}
               accessibilityRole="button"
+              accessibilityLabel={
+                mine.revealed
+                  ? "Hide your chip-in from the recipient"
+                  : "Reveal your chip-in to the recipient"
+              }
+              accessibilityState={{ selected: mine.revealed }}
             >
               <Text style={styles.revealToggle}>
                 {mine.revealed

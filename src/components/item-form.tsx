@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { clampLen, clampQuantity, parsePriceToCents, LIMITS } from "@/lib/validation";
-import { splitUrls } from "@/lib/urls";
+import { firstUrl, splitUrls } from "@/lib/urls";
 import { pendingSharedUrl } from "@/lib/share-intent";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -23,14 +23,14 @@ import type { Item } from "@/types/database";
 export type ItemFormValue = {
   title: string;
   url: string | null;
-  image_url: string | null;
+  image_url: string | null; // cover/thumbnail
+  photos: string[]; // additional gallery images
   price_cents: number | null;
   currency: string | null;
   note: string | null;
   quantity: number;
   is_priority: boolean;
   is_group_gift: boolean;
-  photos: string[];
 };
 
 // Shared form for creating and editing an item. Handles link scraping and
@@ -79,7 +79,9 @@ export function ItemForm({
     if (initial) return;
     pendingSharedUrl.get().then((shared) => {
       if (shared) {
-        setUrl(shared);
+        // Shared text may wrap the link in chatter — pull the clean URL out,
+        // falling back to the raw string so nothing is silently dropped.
+        setUrl(firstUrl(shared) ?? shared);
         void pendingSharedUrl.clear();
       }
     });
@@ -138,7 +140,9 @@ export function ItemForm({
     try {
       const p = await scrapeRepo.fromUrl(url.trim());
       if (p.title) setTitle(p.title);
-      if (p.image) setImageUrl(p.image);
+      // Use the scraped image as the cover only if one isn't set, so it never
+      // clobbers a cover the user chose by hand.
+      if (p.image) setImageUrl((cur) => cur ?? p.image);
       if (p.currency) setCurrency(p.currency);
       if (p.price_cents != null) setPriceText((p.price_cents / 100).toFixed(2));
     } catch {
@@ -233,12 +237,20 @@ export function ItemForm({
           keyboardType="url"
           value={url}
           onChangeText={setUrl}
+          accessibilityLabel="Product link"
         />
-        <Pressable style={styles.fetchBtn} onPress={fetchMeta} disabled={scraping}>
+        <Pressable
+          style={styles.fetchBtn}
+          onPress={fetchMeta}
+          disabled={scraping}
+          accessibilityRole="button"
+          accessibilityLabel="Fetch product details from the link"
+          accessibilityState={{ busy: scraping, disabled: scraping }}
+        >
           {scraping ? (
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
-            <Text style={styles.fetchText}>Fetch</Text>
+            <Text style={styles.fetchText} maxFontSizeMultiplier={1.6}>Fetch</Text>
           )}
         </Pressable>
       </View>
@@ -251,6 +263,7 @@ export function ItemForm({
         value={title}
         onChangeText={setTitle}
         maxLength={LIMITS.title}
+        accessibilityLabel="Item name"
       />
 
       <View style={styles.twoCol}>
@@ -261,6 +274,7 @@ export function ItemForm({
           keyboardType="decimal-pad"
           value={priceText}
           onChangeText={setPriceText}
+          accessibilityLabel="Price"
         />
         <TextInput
           style={[styles.input, { flex: 1 }]}
@@ -269,6 +283,7 @@ export function ItemForm({
           keyboardType="number-pad"
           value={quantityText}
           onChangeText={setQuantityText}
+          accessibilityLabel="Quantity"
         />
       </View>
 
@@ -280,19 +295,27 @@ export function ItemForm({
         onChangeText={setNote}
         maxLength={LIMITS.note}
         multiline
+        accessibilityLabel="Note"
       />
 
       <View style={styles.photoRow}>
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.photo} />
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.photo}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          />
         ) : (
           <View style={[styles.photo, styles.photoEmpty]}>
-            <Text style={styles.photoEmptyText}>🎁</Text>
+            <Text style={styles.photoEmptyText} accessibilityElementsHidden importantForAccessibility="no">
+              🎁
+            </Text>
           </View>
         )}
         <View style={styles.photoActions}>
           <Button
-            title={imageUrl ? "Change photo" : "Add photo"}
+            title={imageUrl ? "Change cover photo" : "Add cover photo"}
             variant="secondary"
             onPress={pickPhoto}
             loading={uploading}
@@ -302,7 +325,7 @@ export function ItemForm({
               onPress={() => setImageUrl(null)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Remove photo"
+              accessibilityLabel="Remove cover photo"
             >
               <Text style={styles.removePhoto}>Remove photo</Text>
             </Pressable>
@@ -333,6 +356,9 @@ export function ItemForm({
       <Pressable
         style={[styles.priorityRow, isPriority && styles.priorityRowOn]}
         onPress={() => setIsPriority((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="Mark as most wanted"
+        accessibilityState={{ selected: isPriority }}
       >
         <Text style={styles.priorityText}>
           {isPriority ? "★ Most wanted" : "☆ Mark as most wanted"}
@@ -342,6 +368,9 @@ export function ItemForm({
       <Pressable
         style={[styles.priorityRow, isGroupGift && styles.priorityRowOn]}
         onPress={() => setIsGroupGift((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="Make this a group gift that members pool together"
+        accessibilityState={{ selected: isGroupGift }}
       >
         <Text style={styles.priorityText}>
           {isGroupGift ? "🎁 Group gift — members pool together" : "🎁 Make this a group gift"}

@@ -3,7 +3,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -12,8 +11,8 @@ import {
   View,
 } from "react-native";
 import * as Linking from "expo-linking";
-import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as haptics from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
@@ -24,24 +23,23 @@ import { ItemForm } from "@/components/item-form";
 import { ItemReactions } from "@/components/item-reactions";
 import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
+import { deriveReserveState } from "@/lib/reserve-state";
 import { isSafeHttpUrl } from "@/lib/validation";
 import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
+import { reservationsRepo } from "@/data/repositories/reservations";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { groupsRepo } from "@/data/repositories/groups";
-import { subscribeToClaims } from "@/data/realtime";
+import { subscribeToClaims, subscribeToReservations } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
-import type { Claim, Item, Wishlist } from "@/types/database";
+import type { Claim, Item, Reservation, Wishlist } from "@/types/database";
 
-function tapFeedback() {
-  if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-}
-
-// Stable empty reference so memoized rows with no claims don't re-render.
+// Stable empty references so memoized rows with no claims/reservations don't re-render.
 const NO_CLAIMS: Claim[] = [];
+const NO_RESERVATIONS: Reservation[] = [];
 
 // Prompts to seed an empty list — tapping one prefills the add form's name.
 const GIFT_CATEGORIES = [
@@ -65,6 +63,7 @@ export default function ListScreen() {
   const [list, setList] = useState<Wishlist | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Record<string, Claim[]>>({});
+  const [reservations, setReservations] = useState<Record<string, Reservation[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [seedTitle, setSeedTitle] = useState<string | undefined>();
@@ -80,6 +79,10 @@ export default function ListScreen() {
   useEffect(() => {
     claimsRef.current = claims;
   }, [claims]);
+  const reservationsRef = useRef(reservations);
+  useEffect(() => {
+    reservationsRef.current = reservations;
+  }, [reservations]);
 
   const isOwner = list?.owner_id === user?.id;
   const q = query.trim().toLowerCase();
@@ -98,6 +101,13 @@ export default function ListScreen() {
     setClaims(byItem);
   }, []);
 
+  const refreshReservations = useCallback(async (currentItems: Item[]) => {
+    const rows = await reservationsRepo.forItems(currentItems.map((i) => i.id));
+    const byItem: Record<string, Reservation[]> = {};
+    for (const r of rows) (byItem[r.item_id] ??= []).push(r);
+    setReservations(byItem);
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const [w, its] = await Promise.all([
@@ -114,12 +124,14 @@ export default function ListScreen() {
         .then((g) => setCoverUrl(g.background_url))
         .catch(() => {});
       await refreshClaims(its);
+      // Reservations follow the same Surprise Wall — the owner gets an empty set.
+      if (w.owner_id !== userId) void refreshReservations(its);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load list", "error");
     } finally {
       setLoaded(true);
     }
-  }, [id, refreshClaims, showToast]);
+  }, [id, userId, refreshClaims, refreshReservations, showToast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -131,11 +143,17 @@ export default function ListScreen() {
   // owner's device never receives these events for their own list.
   useEffect(() => {
     if (isOwner) return; // owner sees no claim data by design
-    const unsub = subscribeToClaims(() => {
+    const unsubClaims = subscribeToClaims(() => {
       void wishlistsRepo.items(id).then(refreshClaims);
     });
-    return unsub;
-  }, [id, isOwner, refreshClaims]);
+    const unsubReservations = subscribeToReservations(() => {
+      void wishlistsRepo.items(id).then(refreshReservations);
+    });
+    return () => {
+      unsubClaims();
+      unsubReservations();
+    };
+  }, [id, isOwner, refreshClaims, refreshReservations]);
 
   const confirmDelete = useCallback((item: Item) => {
     Alert.alert("Delete item", `Remove "${item.title}"?`, [
@@ -177,7 +195,7 @@ export default function ListScreen() {
     async (item: Item) => {
       const mine = (claimsRef.current[item.id] ?? []).find((c) => c.buyer_id === userId);
       if (!mine) return;
-      tapFeedback();
+      haptics.tap();
       const nextPurchased = mine.status !== "purchased";
       setClaims((prev) => ({
         ...prev,
@@ -201,7 +219,7 @@ export default function ListScreen() {
   // to the recipient (who must also opt in before they see it).
   const toggleReveal = useCallback(
     async (item: Item, revealed: boolean) => {
-      tapFeedback();
+      haptics.tap();
       setClaims((prev) => ({
         ...prev,
         [item.id]: (prev[item.id] ?? []).map((c) =>
@@ -228,7 +246,7 @@ export default function ListScreen() {
       const next = [...items];
       [next[idx], next[j]] = [next[j], next[idx]];
       setItems(next);
-      tapFeedback();
+      haptics.tap();
       try {
         await wishlistsRepo.reorder(next.map((i) => i.id));
       } catch (e) {
@@ -245,7 +263,7 @@ export default function ListScreen() {
       const mineClaim = (claimsRef.current[item.id] ?? []).some(
         (c) => c.buyer_id === userId,
       );
-      tapFeedback();
+      haptics.tap();
       // Optimistic update.
       setClaims((prev) => {
         const cur = prev[item.id] ?? [];
@@ -273,6 +291,38 @@ export default function ListScreen() {
       } catch (e) {
         showToast(String((e as Error).message) || "Claim failed", "error");
         await load(); // reconcile from server
+      }
+    },
+    [userId, load, showToast],
+  );
+
+  // Soft interest: a "thinking about this" flag that never blocks a claim.
+  const toggleReserve = useCallback(
+    async (item: Item) => {
+      if (!userId) return;
+      const mineReserved = (reservationsRef.current[item.id] ?? []).some(
+        (r) => r.user_id === userId,
+      );
+      haptics.tap();
+      setReservations((prev) => {
+        const cur = prev[item.id] ?? [];
+        if (mineReserved) {
+          return { ...prev, [item.id]: cur.filter((r) => r.user_id !== userId) };
+        }
+        return {
+          ...prev,
+          [item.id]: [
+            ...cur,
+            { id: "optimistic", item_id: item.id, user_id: userId, created_at: new Date().toISOString() },
+          ],
+        };
+      });
+      try {
+        if (mineReserved) await reservationsRepo.release(item.id);
+        else await reservationsRepo.reserve(item.id);
+      } catch (e) {
+        showToast(String((e as Error).message) || "Couldn't update", "error");
+        await load();
       }
     },
     [userId, load, showToast],
@@ -346,7 +396,14 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
-      {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.listCover} /> : null}
+      {coverUrl ? (
+        <Image
+          source={{ uri: coverUrl }}
+          style={styles.listCover}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+      ) : null}
       {list?.event_date && occasionCountdown(list.event_date, list.recurs_yearly) ? (
         <View style={styles.countdownBanner}>
           <Text style={styles.countdownText}>
@@ -357,7 +414,9 @@ export default function ListScreen() {
       ) : null}
       {isOwner && loaded && items.length > 0 ? (
         <View style={styles.surpriseBanner}>
-          <Text style={styles.surpriseEmoji}>🤫</Text>
+          <Text style={styles.surpriseEmoji} accessibilityElementsHidden importantForAccessibility="no">
+            🤫
+          </Text>
           <Text style={styles.surpriseText}>
             This is your list — who claimed or bought each item stays hidden from you, so your gifts stay a surprise.
           </Text>
@@ -368,6 +427,7 @@ export default function ListScreen() {
           style={styles.revealLink}
           onPress={() => router.push(`/reveal/${id}`)}
           accessibilityRole="button"
+          accessibilityLabel="See who gave what"
         >
           <Text style={styles.revealLinkText}>🎁 See who gave what →</Text>
         </Pressable>
@@ -416,11 +476,13 @@ export default function ListScreen() {
           <ItemRow
             item={item}
             claims={claims[item.id]}
+            reservations={reservations[item.id]}
             isOwner={isOwner}
             currentUserId={userId}
             onToggle={toggleClaim}
             onTogglePurchased={togglePurchased}
             onToggleReveal={toggleReveal}
+            onReserve={toggleReserve}
             onEdit={openEditItem}
             onDelete={confirmDelete}
             onDiscuss={openDiscuss}
@@ -485,6 +547,7 @@ export default function ListScreen() {
                     onChangeText={setEventDateText}
                     autoCapitalize="none"
                     maxLength={10}
+                    accessibilityLabel="Occasion date, format year-month-day"
                   />
                   <Button title="Save" variant="secondary" onPress={saveEventDate} />
                 </View>
@@ -512,11 +575,13 @@ export default function ListScreen() {
 const ItemRow = memo(function ItemRow({
   item,
   claims,
+  reservations,
   isOwner,
   currentUserId,
   onToggle,
   onTogglePurchased,
   onToggleReveal,
+  onReserve,
   onEdit,
   onDelete,
   onDiscuss,
@@ -529,11 +594,13 @@ const ItemRow = memo(function ItemRow({
 }: {
   item: Item;
   claims?: Claim[];
+  reservations?: Reservation[];
   isOwner: boolean;
   currentUserId?: string;
   onToggle: (item: Item) => void;
   onTogglePurchased: (item: Item) => void;
   onToggleReveal: (item: Item, revealed: boolean) => void;
+  onReserve: (item: Item) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onDiscuss: (item: Item) => void;
@@ -550,15 +617,25 @@ const ItemRow = memo(function ItemRow({
     currentUserId,
     item.quantity,
   );
+  const reserve = deriveReserveState(reservations ?? NO_RESERVATIONS, currentUserId);
   const multi = item.quantity > 1;
   const countLabel = `${count} of ${item.quantity} claimed`;
 
   return (
     <Card style={styles.item}>
       {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.thumb} />
+        <Image
+          source={{ uri: item.image_url }}
+          style={styles.thumb}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
       ) : (
-        <View style={[styles.thumb, styles.thumbEmpty]}>
+        <View
+          style={[styles.thumb, styles.thumbEmpty]}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
           <Text style={styles.thumbEmptyText}>🎁</Text>
         </View>
       )}
@@ -581,15 +658,26 @@ const ItemRow = memo(function ItemRow({
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
         {item.photos && item.photos.length > 0 ? (
-          <View style={styles.galleryRow}>
+          <View style={styles.galleryRow} accessibilityLabel={`${item.photos.length} more photos`}>
             {item.photos.map((p) => (
-              <Image key={p} source={{ uri: p }} style={styles.galleryThumb} />
+              <Image
+                key={p}
+                source={{ uri: p }}
+                style={styles.galleryThumb}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
             ))}
           </View>
         ) : null}
 
         {item.url && (
-          <Pressable onPress={() => onOpenUrl(item.url!)} hitSlop={6}>
+          <Pressable
+            onPress={() => onOpenUrl(item.url!)}
+            hitSlop={6}
+            accessibilityRole="link"
+            accessibilityLabel={`View ${item.title} product page`}
+          >
             <Text style={styles.link}>View product ↗</Text>
           </Pressable>
         )}
@@ -726,6 +814,29 @@ const ItemRow = memo(function ItemRow({
                 </Text>
               </Pressable>
             )}
+            {reserve.others > 0 ? (
+              <Text style={styles.reserveNote}>
+                🔖 {reserve.others} {reserve.others === 1 ? "person is" : "people are"} considering this
+              </Text>
+            ) : null}
+            {!mine && (!full || reserve.mine) ? (
+              <Pressable
+                onPress={() => onReserve(item)}
+                hitSlop={8}
+                style={styles.purchaseToggleWrap}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  reserve.mine ? "Remove your reservation" : "Reserve this for later"
+                }
+                accessibilityState={{ selected: reserve.mine }}
+              >
+                <Text style={styles.reserveToggle}>
+                  {reserve.mine
+                    ? "🔖 Reserved — thinking about it (tap to undo)"
+                    : "🔖 Reserve for later"}
+                </Text>
+              </Pressable>
+            ) : null}
               </>
             )}
             <Pressable
@@ -818,6 +929,8 @@ const makeStyles = (c: ThemeColors) =>
     purchaseToggleWrap: { alignItems: "center" },
     purchaseToggle: { fontSize: 13, color: c.accent, fontWeight: "600" },
     revealToggle: { fontSize: 13, color: c.accent, fontWeight: "700" },
+    reserveToggle: { fontSize: 13, color: c.accent, fontWeight: "600" },
+    reserveNote: { fontSize: 12, color: c.textMuted, fontWeight: "600" },
     discussWrap: { alignItems: "center", marginTop: 2 },
     discuss: { fontSize: 13, color: c.textMuted, fontWeight: "600" },
     claimBtn: {

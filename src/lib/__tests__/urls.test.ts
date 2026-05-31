@@ -1,4 +1,4 @@
-import { splitUrls } from "../urls";
+import { splitUrls, firstUrl } from "../urls";
 
 describe("splitUrls", () => {
   it("returns a single url", () => {
@@ -25,5 +25,18 @@ describe("splitUrls", () => {
   it("returns empty for empty/whitespace", () => {
     expect(splitUrls("")).toEqual([]);
     expect(splitUrls("   \n  ")).toEqual([]);
+  });
+});
+
+describe("firstUrl", () => {
+  it("pulls the link out of surrounding chatter", () => {
+    expect(firstUrl("check this out https://a.com/p cool right")).toBe("https://a.com/p");
+  });
+  it("returns the first when several are present", () => {
+    expect(firstUrl("https://a.com https://b.com")).toBe("https://a.com");
+  });
+  it("returns null when there's no valid url", () => {
+    expect(firstUrl("just some text")).toBeNull();
+    expect(firstUrl("")).toBeNull();
   });
 });

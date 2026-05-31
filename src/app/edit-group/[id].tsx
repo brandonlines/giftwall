@@ -72,6 +72,7 @@ export default function EditGroupScreen() {
           placeholderTextColor={colors.placeholder}
           editable={!loading}
           maxLength={60}
+          accessibilityLabel="Group name"
         />
         <Button title="Save" onPress={save} loading={saving} />
 
