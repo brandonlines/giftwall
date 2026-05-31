@@ -4,6 +4,7 @@ import {
   formatCountdown,
   nextOccurrence,
   occasionCountdown,
+  reminderDueDays,
 } from "../dates";
 
 const NOW = Date.UTC(2026, 4, 29); // 2026-05-29 UTC midnight
@@ -79,5 +80,25 @@ describe("occasionCountdown", () => {
   });
   it("behaves like formatCountdown for one-off dates", () => {
     expect(occasionCountdown("2026-05-24", false, NOW)).toBe("5 days ago");
+  });
+});
+
+describe("reminderDueDays", () => {
+  it("fires at 7/3/1/0 days out", () => {
+    expect(reminderDueDays("2026-06-05", false, NOW)).toBe(7);
+    expect(reminderDueDays("2026-06-01", false, NOW)).toBe(3);
+    expect(reminderDueDays("2026-05-30", false, NOW)).toBe(1);
+    expect(reminderDueDays("2026-05-29", false, NOW)).toBe(0);
+  });
+  it("is null on non-threshold and past one-off days", () => {
+    expect(reminderDueDays("2026-05-31", false, NOW)).toBeNull(); // 2 days out
+    expect(reminderDueDays("2026-05-20", false, NOW)).toBeNull(); // already passed
+  });
+  it("uses the next occurrence for recurring dates", () => {
+    expect(reminderDueDays("1990-05-30", true, NOW)).toBe(1); // birthday tomorrow
+    expect(reminderDueDays("1990-05-28", true, NOW)).toBeNull(); // ~next year, far off
+  });
+  it("is null for invalid input", () => {
+    expect(reminderDueDays("nope", true, NOW)).toBeNull();
   });
 });

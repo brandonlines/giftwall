@@ -1,3 +1,4 @@
+import { decode } from "base64-arraybuffer";
 import { supabase, currentUserId } from "../../lib/supabase";
 import type { EventType, Group, MemberRole, Membership } from "../../types/database";
 
@@ -156,5 +157,37 @@ export const groupsRepo = {
     });
     if (error) throw error;
     return data;
+  },
+
+  // Group cover image — ANY member may set it. Upload the file to the group's
+  // folder, then record the URL via the member-gated RPC (the groups UPDATE
+  // policy is admin-only, so a non-admin can't write background_url directly).
+  async uploadBackground(
+    groupId: string,
+    base64: string,
+    mimeType = "image/jpeg",
+  ): Promise<string> {
+    const ext = mimeType.split("/")[1] ?? "jpg";
+    const path = `${groupId}/bg.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("group-backgrounds")
+      .upload(path, decode(base64), { contentType: mimeType, upsert: true });
+    if (upErr) throw upErr;
+    const { data } = supabase.storage.from("group-backgrounds").getPublicUrl(path);
+    const url = `${data.publicUrl}?t=${Date.now()}`;
+    const { error } = await supabase.rpc("set_group_background", {
+      p_group_id: groupId,
+      p_url: url,
+    });
+    if (error) throw error;
+    return url;
+  },
+
+  async clearBackground(groupId: string): Promise<void> {
+    const { error } = await supabase.rpc("set_group_background", {
+      p_group_id: groupId,
+      p_url: null,
+    });
+    if (error) throw error;
   },
 };

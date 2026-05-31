@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -92,6 +92,21 @@ export default function ChipInScreen() {
     }
   }
 
+  // Giver's half of the two-party reveal for a group gift.
+  async function toggleReveal() {
+    if (!mine) return;
+    setBusy(true);
+    try {
+      await contributionsRepo.setRevealed(id, !mine.revealed);
+      showToast(mine.revealed ? "Hidden again" : "They'll see your chip-in 🎁", "success");
+      await load();
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't update", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const total = sumCents(rows);
   const frac = fundedFraction(rows, targetCents);
   const people = rows.length;
@@ -144,8 +159,22 @@ export default function ChipInScreen() {
           {mine ? (
             <Button title="Remove my pledge" variant="danger" onPress={remove} loading={busy} />
           ) : null}
+          {mine ? (
+            <Pressable
+              onPress={toggleReveal}
+              hitSlop={8}
+              style={styles.revealWrap}
+              accessibilityRole="button"
+            >
+              <Text style={styles.revealToggle}>
+                {mine.revealed
+                  ? "🎁 Revealed to them ✓ (tap to hide)"
+                  : "🎁 Reveal my chip-in to them"}
+              </Text>
+            </Pressable>
+          ) : null}
           <Text style={styles.note}>
-            🤫 Only group members see this — never the recipient.
+            🤫 Hidden from the recipient until you reveal it and they ask to see.
           </Text>
         </Card>
       </View>
@@ -181,5 +210,7 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.inputBg,
       color: c.inputText,
     },
+    revealWrap: { alignItems: "center", paddingVertical: 4 },
+    revealToggle: { fontSize: 13, color: c.accent, fontWeight: "700" },
     note: { fontSize: 12, color: c.textMuted, textAlign: "center", marginTop: 2 },
   });

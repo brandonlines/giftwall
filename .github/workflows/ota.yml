@@ -1,0 +1,42 @@
+name: OTA update
+
+# Manual trigger only — publish AFTER the matching backend (migrations + edge
+# functions) is live, or the JS will query tables/RPCs that don't exist yet.
+# OTA ships JS + asset changes to the EXISTING native build; a native change
+# (new native module, or an app version bump) needs `eas build` + a store
+# submission instead, not this workflow.
+#
+# Requires an EXPO_TOKEN repo secret (expo.dev → Account → Access tokens).
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "EAS Update branch"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - preview
+
+jobs:
+  publish:
+    name: Publish OTA update
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test -- --ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish OTA update
+        run: eas update --branch "${{ inputs.branch }}" --message "$(git log -1 --pretty=%s)" --non-interactive

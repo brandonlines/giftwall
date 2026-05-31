@@ -29,6 +29,7 @@ import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
 import { scrapeRepo } from "@/data/repositories/scrape";
+import { groupsRepo } from "@/data/repositories/groups";
 import { subscribeToClaims } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
@@ -69,6 +70,7 @@ export default function ListScreen() {
   const [seedTitle, setSeedTitle] = useState<string | undefined>();
   const [eventDateText, setEventDateText] = useState("");
   const [recursYearly, setRecursYearly] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [priceChanged, setPriceChanged] = useState<Set<string>>(() => new Set());
 
   // Keep a ref to claims so the toggle handlers can stay stable (useCallback
@@ -106,6 +108,11 @@ export default function ListScreen() {
       setEventDateText(w.event_date ?? "");
       setRecursYearly(w.recurs_yearly);
       setItems(its);
+      // The group's shared cover, fetched non-blocking (decorative).
+      void groupsRepo
+        .get(w.group_id)
+        .then((g) => setCoverUrl(g.background_url))
+        .catch(() => {});
       await refreshClaims(its);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load list", "error");
@@ -190,6 +197,28 @@ export default function ListScreen() {
     [userId, load, showToast],
   );
 
+  // Giver's half of the two-party reveal: opt this claim in/out of being shown
+  // to the recipient (who must also opt in before they see it).
+  const toggleReveal = useCallback(
+    async (item: Item, revealed: boolean) => {
+      tapFeedback();
+      setClaims((prev) => ({
+        ...prev,
+        [item.id]: (prev[item.id] ?? []).map((c) =>
+          c.buyer_id === userId ? { ...c, revealed } : c,
+        ),
+      }));
+      try {
+        await claimsRepo.setRevealed(item.id, revealed);
+        showToast(revealed ? "They'll see this gift 🎁" : "Hidden again", "success");
+      } catch (e) {
+        showToast(String((e as Error).message) || "Couldn't update", "error");
+        await load();
+      }
+    },
+    [userId, load, showToast],
+  );
+
   const toggleClaim = useCallback(
     async (item: Item) => {
       if (!userId) return;
@@ -212,6 +241,7 @@ export default function ListScreen() {
               item_id: item.id,
               buyer_id: userId,
               status: "claimed",
+              revealed: false,
               created_at: new Date().toISOString(),
             },
           ],
@@ -296,6 +326,7 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
+      {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.listCover} /> : null}
       {list?.event_date && occasionCountdown(list.event_date, list.recurs_yearly) ? (
         <View style={styles.countdownBanner}>
           <Text style={styles.countdownText}>
@@ -311,6 +342,15 @@ export default function ListScreen() {
             This is your list — who claimed or bought each item stays hidden from you, so your gifts stay a surprise.
           </Text>
         </View>
+      ) : null}
+      {isOwner && loaded && items.length > 0 ? (
+        <Pressable
+          style={styles.revealLink}
+          onPress={() => router.push(`/reveal/${id}`)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.revealLinkText}>🎁 See who gave what →</Text>
+        </Pressable>
       ) : null}
       {items.length > 3 && (
         <View style={styles.searchWrap}>
@@ -360,6 +400,7 @@ export default function ListScreen() {
             currentUserId={userId}
             onToggle={toggleClaim}
             onTogglePurchased={togglePurchased}
+            onToggleReveal={toggleReveal}
             onEdit={openEditItem}
             onDelete={confirmDelete}
             onDiscuss={openDiscuss}
@@ -451,6 +492,7 @@ const ItemRow = memo(function ItemRow({
   currentUserId,
   onToggle,
   onTogglePurchased,
+  onToggleReveal,
   onEdit,
   onDelete,
   onDiscuss,
@@ -465,6 +507,7 @@ const ItemRow = memo(function ItemRow({
   currentUserId?: string;
   onToggle: (item: Item) => void;
   onTogglePurchased: (item: Item) => void;
+  onToggleReveal: (item: Item, revealed: boolean) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onDiscuss: (item: Item) => void;
@@ -591,6 +634,21 @@ const ItemRow = memo(function ItemRow({
                     {purchased ? "Mark as not purchased" : "Mark as purchased"}
                   </Text>
                 </Pressable>
+                <Pressable
+                  onPress={() => onToggleReveal(item, !mine.revealed)}
+                  hitSlop={8}
+                  style={styles.purchaseToggleWrap}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    mine.revealed
+                      ? "Hide your gift from the recipient"
+                      : "Let the recipient see your gift after the occasion"
+                  }
+                >
+                  <Text style={styles.revealToggle}>
+                    {mine.revealed ? "🎁 Revealed to them ✓" : "🎁 Reveal my gift to them"}
+                  </Text>
+                </Pressable>
               </>
             ) : full ? (
               <View style={[styles.claimBtn, styles.claimedOther]}>
@@ -631,6 +689,13 @@ const ItemRow = memo(function ItemRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 12 },
+    listCover: {
+      height: 104,
+      marginHorizontal: 16,
+      marginTop: 12,
+      borderRadius: 12,
+      backgroundColor: c.accentSoft,
+    },
     countdownBanner: {
       marginHorizontal: 16,
       marginTop: 12,
@@ -655,6 +720,8 @@ const makeStyles = (c: ThemeColors) =>
     },
     surpriseEmoji: { fontSize: 18 },
     surpriseText: { flex: 1, color: c.textMuted, fontSize: 13, lineHeight: 18 },
+    revealLink: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 8 },
+    revealLinkText: { color: c.accent, fontWeight: "700", fontSize: 14 },
     occasionWrap: { marginTop: 24 },
     occasionRow: { flexDirection: "row", gap: 8, alignItems: "center" },
     recurRow: { flexDirection: "row", gap: 10, alignItems: "center", marginTop: 12 },
@@ -690,6 +757,7 @@ const makeStyles = (c: ThemeColors) =>
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
     purchaseToggleWrap: { alignItems: "center" },
     purchaseToggle: { fontSize: 13, color: c.accent, fontWeight: "600" },
+    revealToggle: { fontSize: 13, color: c.accent, fontWeight: "700" },
     discussWrap: { alignItems: "center", marginTop: 2 },
     discuss: { fontSize: 13, color: c.textMuted, fontWeight: "600" },
     claimBtn: {

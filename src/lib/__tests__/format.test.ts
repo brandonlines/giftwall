@@ -4,8 +4,18 @@ describe("formatPrice", () => {
   it("defaults to a $ prefix", () => {
     expect(formatPrice(12900, null)).toBe("$129.00");
   });
-  it("uses the given currency", () => {
-    expect(formatPrice(1850, "GBP")).toBe("GBP 18.50");
+  it("maps known currency codes to their symbol", () => {
+    expect(formatPrice(1850, "GBP")).toBe("£18.50");
+    expect(formatPrice(50000, "EUR")).toBe("€500.00");
+    expect(formatPrice(2500, "JPY")).toBe("¥25.00");
+    expect(formatPrice(1850, "cad")).toBe("$18.50"); // case-insensitive
+  });
+  it("falls back to a CODE prefix for unknown currencies", () => {
+    expect(formatPrice(1850, "XYZ")).toBe("XYZ 18.50");
+  });
+  it("groups thousands", () => {
+    expect(formatPrice(129900, null)).toBe("$1,299.00");
+    expect(formatPrice(123456789, "EUR")).toBe("€1,234,567.89");
   });
   it("keeps two decimals", () => {
     expect(formatPrice(999, null)).toBe("$9.99");

@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
   Pressable,
   Share,
   StyleSheet,
@@ -11,6 +12,7 @@ import {
   View,
 } from "react-native";
 import * as Linking from "expo-linking";
+import * as ImagePicker from "expo-image-picker";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -42,6 +44,7 @@ export default function GroupScreen() {
   const [santaReceiver, setSantaReceiver] = useState<string | null>(null);
   const [santaDrawn, setSantaDrawn] = useState(false);
   const [santaBusy, setSantaBusy] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const showToast = useToast();
 
   const onListOpen = useCallback((listId: string) => router.push(`/list/${listId}`), [router]);
@@ -112,6 +115,53 @@ export default function GroupScreen() {
     });
   }
 
+  // Group cover image — any member can set/replace/remove it.
+  async function pickCover() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+      base64: true,
+    });
+    if (result.canceled || !result.assets[0]?.base64) return;
+    const asset = result.assets[0];
+    setUploadingCover(true);
+    try {
+      const url = await groupsRepo.uploadBackground(
+        id,
+        asset.base64!,
+        asset.mimeType ?? "image/jpeg",
+      );
+      setGroup((g) => (g ? { ...g, background_url: url } : g));
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't update cover", "error");
+    } finally {
+      setUploadingCover(false);
+    }
+  }
+
+  async function removeCover() {
+    try {
+      await groupsRepo.clearBackground(id);
+      setGroup((g) => (g ? { ...g, background_url: null } : g));
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't remove cover", "error");
+    }
+  }
+
+  function coverMenu() {
+    if (!group?.background_url) {
+      void pickCover();
+      return;
+    }
+    Alert.alert("Group cover", undefined, [
+      { text: "Replace photo", onPress: () => void pickCover() },
+      { text: "Remove", style: "destructive", onPress: () => void removeCover() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
   useFocusEffect(
     useCallback(() => {
       void load();
@@ -164,6 +214,25 @@ export default function GroupScreen() {
         ListHeaderComponent={
           group ? (
             <View>
+              <Pressable
+                style={styles.cover}
+                onPress={coverMenu}
+                accessibilityRole="button"
+                accessibilityLabel="Change group cover photo"
+              >
+                {group.background_url ? (
+                  <Image source={{ uri: group.background_url }} style={styles.coverImg} />
+                ) : (
+                  <View style={[styles.coverImg, styles.coverEmpty]}>
+                    <Text style={styles.coverEmptyText}>🖼️  Add a group cover</Text>
+                  </View>
+                )}
+                <View style={styles.coverBadge}>
+                  <Text style={styles.coverBadgeText}>
+                    {uploadingCover ? "Uploading…" : "📷"}
+                  </Text>
+                </View>
+              </Pressable>
               <Card style={styles.codeCard} onPress={() => router.push(`/group-qr/${id}`)}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.codeLabel}>Invite code · tap for QR</Text>
@@ -314,6 +383,20 @@ const WishlistRow = memo(function WishlistRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 8 },
+    cover: { marginBottom: 12, borderRadius: 16, overflow: "hidden" },
+    coverImg: { width: "100%", height: 150, backgroundColor: c.accentSoft },
+    coverEmpty: { alignItems: "center", justifyContent: "center" },
+    coverEmptyText: { color: c.onAccentSoft, fontWeight: "700", fontSize: 15 },
+    coverBadge: {
+      position: "absolute",
+      right: 10,
+      bottom: 10,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      borderRadius: 16,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    coverBadgeText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
     empty: { color: c.pageTextMuted, textAlign: "center", marginVertical: 24 },
     row: {
       flexDirection: "row",

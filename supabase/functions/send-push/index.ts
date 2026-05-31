@@ -94,11 +94,28 @@ Deno.serve(async (req) => {
   }));
 
   if (messages.length > 0) {
-    await fetch(EXPO_PUSH, {
+    const pushRes = await fetch(EXPO_PUSH, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(messages),
     });
+
+    // Prune tokens Expo reports as unregistered (app uninstalled / token
+    // rotated) so we stop pushing to dead devices and don't waste quota.
+    // Tickets come back in the same order as the messages we sent. Best-effort:
+    // never fail the webhook over response parsing.
+    try {
+      const body = await pushRes.json();
+      const tickets = Array.isArray(body?.data) ? body.data : [];
+      const dead = messages
+        .map((m, i) => (tickets[i]?.details?.error === "DeviceNotRegistered" ? m.to : null))
+        .filter((t): t is string => t !== null);
+      if (dead.length > 0) {
+        await admin.from("push_tokens").delete().in("token", dead);
+      }
+    } catch {
+      // ignore — pruning is a hygiene optimization, not part of delivery
+    }
   }
 
   return new Response(JSON.stringify({ sent: messages.length }), {

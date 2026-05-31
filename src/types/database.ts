@@ -32,9 +32,9 @@ export interface Database {
         Relationships: [];
       };
       groups: {
-        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; created_at: string };
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; created_at: string };
         Insert: { id?: string; name: string; created_by: string; event_type?: EventType };
-        Update: { name?: string; event_type?: EventType };
+        Update: { name?: string; event_type?: EventType; background_url?: string | null };
         Relationships: [];
       };
       memberships: {
@@ -51,6 +51,7 @@ export interface Database {
           title: string;
           event_date: string | null;
           recurs_yearly: boolean;
+          reveal_requested: boolean;
           created_at: string;
         };
         Insert: {
@@ -61,7 +62,12 @@ export interface Database {
           event_date?: string | null;
           recurs_yearly?: boolean;
         };
-        Update: { title?: string; event_date?: string | null; recurs_yearly?: boolean };
+        Update: {
+          title?: string;
+          event_date?: string | null;
+          recurs_yearly?: boolean;
+          reveal_requested?: boolean;
+        };
         Relationships: [];
       };
       items: {
@@ -111,10 +117,11 @@ export interface Database {
           item_id: string;
           buyer_id: string;
           status: ClaimStatus;
+          revealed: boolean;
           created_at: string;
         };
         Insert: { id?: string; item_id: string; buyer_id: string; status?: ClaimStatus };
-        Update: { status?: ClaimStatus };
+        Update: { status?: ClaimStatus; revealed?: boolean };
         Relationships: [];
       };
       contributions: {
@@ -124,6 +131,7 @@ export interface Database {
           contributor_id: string;
           amount_cents: number;
           note: string | null;
+          revealed: boolean;
           created_at: string;
         };
         Insert: {
@@ -133,7 +141,7 @@ export interface Database {
           amount_cents: number;
           note?: string | null;
         };
-        Update: { amount_cents?: number; note?: string | null };
+        Update: { amount_cents?: number; note?: string | null; revealed?: boolean };
         Relationships: [];
       };
       reactions: {
@@ -212,6 +220,18 @@ export interface Database {
         Update: { list_title?: string | null; item_title?: string | null };
         Relationships: [];
       };
+      thank_yous: {
+        Row: {
+          item_id: string;
+          from_id: string;
+          to_id: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: { item_id: string; from_id: string; to_id: string; message: string };
+        Update: { message?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -229,6 +249,7 @@ export interface Database {
       rotate_invite_code: { Args: { p_group_id: string }; Returns: string };
       draw_secret_santa: { Args: { p_group_id: string }; Returns: undefined };
       santa_is_drawn: { Args: { p_group_id: string }; Returns: boolean };
+      set_group_background: { Args: { p_group_id: string; p_url: string | null }; Returns: undefined };
     };
     Enums: {
       claim_status: ClaimStatus;
@@ -254,3 +275,4 @@ export type PushToken = T["push_tokens"]["Row"];
 export type NotificationPrefs = T["notification_preferences"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
+export type ThankYou = T["thank_yous"]["Row"];

@@ -46,6 +46,10 @@ describe("offline queue", () => {
       "claim.release": handler,
       "comment.create": handler,
       "item.create": handler,
+      "contribution.chipIn": handler,
+      "contribution.remove": handler,
+      "reaction.add": handler,
+      "reaction.remove": handler,
     });
     expect(handler).toHaveBeenCalledTimes(1);
     expect(await pending()).toHaveLength(0);
@@ -61,9 +65,35 @@ describe("offline queue", () => {
       "claim.release": ok,
       "comment.create": ok,
       "item.create": ok,
+      "contribution.chipIn": ok,
+      "contribution.remove": ok,
+      "reaction.add": ok,
+      "reaction.remove": ok,
     });
     expect(ok).not.toHaveBeenCalled(); // never reached the second item
     expect(await pending()).toHaveLength(2); // nothing drained
+  });
+
+  it("queues and replays contributions and reactions in order", async () => {
+    await enqueue({ kind: "contribution.chipIn", itemId: "i1", amountCents: 500 });
+    await enqueue({ kind: "reaction.add", itemId: "i1", emoji: "❤️" });
+    await enqueue({ kind: "reaction.remove", itemId: "i1", emoji: "❤️" });
+    const seen: string[] = [];
+    const rec = (k: string) => async () => {
+      seen.push(k);
+    };
+    await flush({
+      "claim.create": rec("claim.create"),
+      "claim.release": rec("claim.release"),
+      "comment.create": rec("comment.create"),
+      "item.create": rec("item.create"),
+      "contribution.chipIn": rec("contribution.chipIn"),
+      "contribution.remove": rec("contribution.remove"),
+      "reaction.add": rec("reaction.add"),
+      "reaction.remove": rec("reaction.remove"),
+    });
+    expect(seen).toEqual(["contribution.chipIn", "reaction.add", "reaction.remove"]);
+    expect(await pending()).toHaveLength(0);
   });
 });
 

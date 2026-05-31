@@ -245,6 +245,55 @@ async function run() {
     .select();
   check("A member CANNOT edit someone else's pledge", (carolEditsBob.data?.length ?? 0) === 0);
 
+  // --- Post-occasion reveal (TWO-PARTY opt-in) -----------------------------
+  // Both the giver (per claim/contribution) AND the giftee (per list) must opt
+  // in before the recipient sees anything. Bob has a claim AND a contribution on
+  // i1; Carol has an un-revealed claim on i2.
+  console.log("\nPost-occasion reveal:");
+  await bob.client.from("claims").update({ revealed: true }).eq("item_id", i1).eq("buyer_id", bob.id);
+  const revGiverOnly = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check(
+    "Giver revealed but giftee hasn't opted in → recipient sees nothing",
+    (revGiverOnly.data?.length ?? 0) === 0,
+  );
+  await alice.client.from("wishlists").update({ reveal_requested: true }).eq("id", list.id);
+  const revBoth = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check(
+    "BOTH opted in → recipient finally sees the revealed claim",
+    (revBoth.data?.length ?? 0) === 1 && revBoth.data?.[0]?.buyer_id === bob.id,
+  );
+  const revGifteeOnly = await alice.client.from("claims").select("*").eq("item_id", i2);
+  check(
+    "Giftee opted in but that giver didn't reveal → that claim stays hidden",
+    (revGifteeOnly.data?.length ?? 0) === 0,
+  );
+  const revContribHidden = await alice.client.from("contributions").select("*").eq("item_id", i1);
+  check(
+    "Contribution reveal is independent — still hidden until its giver reveals",
+    (revContribHidden.data?.length ?? 0) === 0,
+  );
+  await bob.client
+    .from("contributions")
+    .update({ revealed: true })
+    .eq("item_id", i1)
+    .eq("contributor_id", bob.id);
+  const revContribShown = await alice.client.from("contributions").select("*").eq("item_id", i1);
+  check(
+    "BOTH opted in → recipient sees the revealed contribution",
+    (revContribShown.data?.length ?? 0) === 1,
+  );
+  const revOutsider = await mallory.client.from("claims").select("*").eq("item_id", i1);
+  check("Outsider still sees nothing after a reveal", (revOutsider.data?.length ?? 0) === 0);
+  const malloryFlip = await mallory.client
+    .from("wishlists")
+    .update({ reveal_requested: true })
+    .eq("id", list.id)
+    .select();
+  check("Non-owner CANNOT request reveal on someone's list", (malloryFlip.data?.length ?? 0) === 0);
+  await alice.client.from("wishlists").update({ reveal_requested: false }).eq("id", list.id);
+  const revWithdrawn = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check("Recipient withdrawing opt-in restores the Surprise Wall", (revWithdrawn.data?.length ?? 0) === 0);
+
   // --- Secret Santa (server-side, secret draw) -----------------------------
   console.log("\nSecret Santa:");
   const carolDraw = await carol.client.rpc("draw_secret_santa", { p_group_id: group.id });
@@ -348,6 +397,45 @@ async function run() {
     .select("*")
     .eq("user_id", alice.id);
   check("Cannot read another user's notification prefs", (bobReadsAlicePref.data?.length ?? 0) === 0);
+
+  console.log("\nGroup cover background:");
+  const bobBg = await bob.client.rpc("set_group_background", {
+    p_group_id: group.id,
+    p_url: "https://example.com/bg.jpg",
+  });
+  check("Any member can set the group background", !bobBg.error, bobBg.error?.message);
+  const bgAfter = await bob.client
+    .from("groups")
+    .select("background_url")
+    .eq("id", group.id)
+    .single();
+  check("Background URL is recorded", bgAfter.data?.background_url === "https://example.com/bg.jpg");
+  const malloryBg = await mallory.client.rpc("set_group_background", {
+    p_group_id: group.id,
+    p_url: "https://evil.example/x.jpg",
+  });
+  check("Outsider CANNOT set the group background", !!malloryBg.error, "expected member-check error");
+
+  console.log("\nThank-you notes:");
+  // Alice owns i1's list; Bob claimed i1. Alice (recipient) thanks Bob (giver).
+  const aliceThanks = await alice.client.from("thank_yous").upsert({
+    item_id: i1,
+    from_id: alice.id,
+    to_id: bob.id,
+    message: "Thanks Bob!",
+  });
+  check("Recipient can thank a giver for a gift on her list", !aliceThanks.error, aliceThanks.error?.message);
+  const bobInbox = await bob.client.from("thank_yous").select("*").eq("to_id", bob.id);
+  check("Giver sees a thank-you addressed to them", (bobInbox.data?.length ?? 0) >= 1);
+  const carolPeek = await carol.client.from("thank_yous").select("*").eq("item_id", i1);
+  check("A member NOT party to the thanks can't read it", (carolPeek.data?.length ?? 0) === 0);
+  const bobForge = await bob.client.from("thank_yous").insert({
+    item_id: i1,
+    from_id: bob.id,
+    to_id: carol.id,
+    message: "nope",
+  });
+  check("Non-owner CANNOT send thanks for someone else's gift", !!bobForge.error, "expected RLS error");
 
   // --- admin management ----------------------------------------------------
   console.log("\nAdmin member management:");

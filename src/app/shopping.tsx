@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
-import { Stack, useFocusEffect } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { SkeletonCard } from "@/components/ui/skeleton";
@@ -17,6 +17,7 @@ type Section = { title: string; subtitle: string; data: ShoppingEntry[] };
 export default function ShoppingScreen() {
   const styles = useThemedStyles(makeStyles);
   const showToast = useToast();
+  const router = useRouter();
   const [entries, setEntries] = useState<ShoppingEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"tobuy" | "purchased">("tobuy");
@@ -92,7 +93,16 @@ export default function ShoppingScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: "Shopping" }} />
+      <Stack.Screen
+        options={{
+          title: "Shopping",
+          headerRight: () => (
+            <Pressable hitSlop={10} onPress={() => router.push("/thanks")}>
+              <Text style={styles.headerLink}>🙏 Thanks</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <SectionList
         sections={sections}
         keyExtractor={(e) => e.claimId}
@@ -192,6 +202,7 @@ function ShoppingRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
+    headerLink: { color: c.headerTint, fontWeight: "700", fontSize: 15 },
     controls: { gap: 8, marginBottom: 12 },
     segment: { flexDirection: "row", gap: 8 },
     segBtn: {
