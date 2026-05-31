@@ -52,3 +52,8 @@ verify_jwt = false
 [functions.delete-account]
 # Authenticated users only — the caller is identified from their JWT.
 verify_jwt = true
+
+[functions.occasion-reminders]
+# Scheduled daily job (cron / pg_net), not an end-user session. Auth is the
+# shared WEBHOOK_SECRET header, checked inside the function (fails closed).
+verify_jwt = false

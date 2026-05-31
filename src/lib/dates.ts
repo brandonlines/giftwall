@@ -61,3 +61,21 @@ export function occasionCountdown(
 ): string | null {
   return formatCountdown(nextOccurrence(dateStr, recursYearly, now), now);
 }
+
+// Days before an occasion at which we send a reminder push.
+export const REMINDER_THRESHOLDS = [0, 1, 3, 7] as const;
+
+// If the next occurrence of an occasion lands exactly on one of the reminder
+// thresholds (today / 1 / 3 / 7 days out), returns that day count; otherwise
+// null. A daily job calls this per list, so each occasion fires at most four
+// reminders and never duplicates within a day. Past one-off dates return null.
+// (The occasion-reminders Edge Function mirrors this logic in Deno.)
+export function reminderDueDays(
+  dateStr: string,
+  recursYearly: boolean,
+  now: number = Date.now(),
+): number | null {
+  if (!isValidDateStr(dateStr)) return null;
+  const days = daysUntil(nextOccurrence(dateStr, recursYearly, now), now);
+  return (REMINDER_THRESHOLDS as readonly number[]).includes(days) ? days : null;
+}
