@@ -276,6 +276,18 @@ export default function ListScreen() {
     (item: Item) => router.push(`/item-comments/${item.id}`),
     [router],
   );
+  const openChipIn = useCallback(
+    (item: Item) =>
+      router.push({
+        pathname: "/chip-in/[id]",
+        params: {
+          id: item.id,
+          title: item.title,
+          price: item.price_cents != null ? String(item.price_cents) : "",
+        },
+      }),
+    [router],
+  );
 
   return (
     <Screen>
@@ -344,6 +356,7 @@ export default function ListScreen() {
             onEdit={openEditItem}
             onDelete={confirmDelete}
             onDiscuss={openDiscuss}
+            onChipIn={openChipIn}
             onOpenUrl={openUrl}
             onRefreshPrice={refreshPrice}
             priceChanged={priceChanged.has(item.id)}
@@ -426,6 +439,7 @@ const ItemRow = memo(function ItemRow({
   onEdit,
   onDelete,
   onDiscuss,
+  onChipIn,
   onOpenUrl,
   onRefreshPrice,
   priceChanged,
@@ -439,6 +453,7 @@ const ItemRow = memo(function ItemRow({
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onDiscuss: (item: Item) => void;
+  onChipIn: (item: Item) => void;
   onOpenUrl: (url: string) => void;
   onRefreshPrice: (item: Item) => void;
   priceChanged?: boolean;
@@ -574,6 +589,15 @@ const ItemRow = memo(function ItemRow({
               accessibilityLabel={`Discuss ${item.title}`}
             >
               <Text style={styles.discuss}>💬 Discuss</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onChipIn(item)}
+              hitSlop={6}
+              style={styles.discussWrap}
+              accessibilityRole="button"
+              accessibilityLabel={`Chip in on ${item.title}`}
+            >
+              <Text style={styles.discuss}>🎁 Group gift</Text>
             </Pressable>
           </View>
         )}

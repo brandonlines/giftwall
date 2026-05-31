@@ -96,6 +96,7 @@ function RootNavigator() {
         <Stack.Screen name="members/[id]" options={{ title: "Members" }} />
         <Stack.Screen name="activity/[id]" options={{ title: "Activity" }} />
         <Stack.Screen name="item-comments/[id]" options={{ title: "Discussion" }} />
+        <Stack.Screen name="chip-in/[id]" options={{ title: "Group gift" }} />
         <Stack.Screen name="legal/[doc]" options={{ title: "Legal" }} />
         <Stack.Screen
           name="edit-group/[id]"

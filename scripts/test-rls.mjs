@@ -196,6 +196,44 @@ async function run() {
   check("Third buyer rejected once fully claimed (cap)", !!mq3.error, "expected cap error");
 
   // --- comments ------------------------------------------------------------
+  // --- group gifting (contributions) — Surprise Wall applies ---------------
+  console.log("\nGroup gifting (contributions):");
+  await bob.client
+    .from("contributions")
+    .insert({ item_id: i1, contributor_id: bob.id, amount_cents: 2500 });
+  const aliceContribs = await alice.client.from("contributions").select("*").eq("item_id", i1);
+  check(
+    "Recipient (Alice) CANNOT see contributions on her own item",
+    (aliceContribs.data?.length ?? 0) === 0,
+    "SURPRISE WALL BREACH",
+  );
+  const carolContribs = await carol.client.from("contributions").select("*").eq("item_id", i1);
+  check("Member (Carol) sees the contribution", (carolContribs.data?.length ?? 0) >= 1);
+  const malloryContribs = await mallory.client.from("contributions").select("*").eq("item_id", i1);
+  check("Outsider (Mallory) sees no contributions", (malloryContribs.data?.length ?? 0) === 0);
+  const aliceChipOwn = await alice.client
+    .from("contributions")
+    .insert({ item_id: i1, contributor_id: alice.id, amount_cents: 1000 });
+  check("Recipient CANNOT chip in on her own item", !!aliceChipOwn.error, "expected error");
+  const malloryChip = await mallory.client
+    .from("contributions")
+    .insert({ item_id: i1, contributor_id: mallory.id, amount_cents: 1000 });
+  check("Outsider CANNOT chip in", !!malloryChip.error, "expected error");
+  const bobUpdate = await bob.client
+    .from("contributions")
+    .update({ amount_cents: 4000 })
+    .eq("item_id", i1)
+    .eq("contributor_id", bob.id)
+    .select();
+  check("Contributor can update their own pledge", (bobUpdate.data?.length ?? 0) === 1, bobUpdate.error?.message);
+  const carolEditsBob = await carol.client
+    .from("contributions")
+    .update({ amount_cents: 1 })
+    .eq("item_id", i1)
+    .eq("contributor_id", bob.id)
+    .select();
+  check("A member CANNOT edit someone else's pledge", (carolEditsBob.data?.length ?? 0) === 0);
+
   console.log("\nPer-item discussion:");
   const bobComment = await bob.client
     .from("item_comments")
