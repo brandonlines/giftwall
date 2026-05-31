@@ -40,5 +40,36 @@ export async function syncOfflineMutations(): Promise<void> {
         .insert({ list_id: m.listId, ...m.fields });
       if (error) throw error;
     },
+    "contribution.chipIn": async (m) => {
+      const { error } = await supabase.from("contributions").upsert(
+        { item_id: m.itemId, contributor_id: uid, amount_cents: m.amountCents },
+        { onConflict: "item_id,contributor_id" },
+      );
+      if (error) throw error;
+    },
+    "contribution.remove": async (m) => {
+      const { error } = await supabase
+        .from("contributions")
+        .delete()
+        .eq("item_id", m.itemId)
+        .eq("contributor_id", uid);
+      if (error) throw error;
+    },
+    "reaction.add": async (m) => {
+      const { error } = await supabase
+        .from("reactions")
+        .insert({ item_id: m.itemId, user_id: uid, emoji: m.emoji });
+      // Already reacted (e.g. synced from another device) → drop quietly.
+      if (error && !/duplicate|unique/i.test(error.message)) throw error;
+    },
+    "reaction.remove": async (m) => {
+      const { error } = await supabase
+        .from("reactions")
+        .delete()
+        .eq("item_id", m.itemId)
+        .eq("user_id", uid)
+        .eq("emoji", m.emoji);
+      if (error) throw error;
+    },
   });
 }

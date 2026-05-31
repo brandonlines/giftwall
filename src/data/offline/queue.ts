@@ -23,7 +23,11 @@ export type QueuedMutation =
   | { kind: "claim.create"; itemId: string; clientId: string }
   | { kind: "claim.release"; itemId: string; clientId: string }
   | { kind: "comment.create"; itemId: string; body: string }
-  | { kind: "item.create"; listId: string; fields: OfflineItemFields };
+  | { kind: "item.create"; listId: string; fields: OfflineItemFields }
+  | { kind: "contribution.chipIn"; itemId: string; amountCents: number }
+  | { kind: "contribution.remove"; itemId: string }
+  | { kind: "reaction.add"; itemId: string; emoji: string }
+  | { kind: "reaction.remove"; itemId: string; emoji: string };
 
 // True when a write failed because the device is offline (vs. a real rejection
 // like an RLS denial), so the repository can queue it instead of surfacing it.
