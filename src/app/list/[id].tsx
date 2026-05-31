@@ -3,7 +3,6 @@ import {
   Alert,
   FlatList,
   Image,
-  Platform,
   Pressable,
   StyleSheet,
   Switch,
@@ -12,8 +11,8 @@ import {
   View,
 } from "react-native";
 import * as Linking from "expo-linking";
-import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as haptics from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
@@ -35,10 +34,6 @@ import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Claim, Item, Wishlist } from "@/types/database";
-
-function tapFeedback() {
-  if (Platform.OS !== "web") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-}
 
 // Stable empty reference so memoized rows with no claims don't re-render.
 const NO_CLAIMS: Claim[] = [];
@@ -177,7 +172,7 @@ export default function ListScreen() {
     async (item: Item) => {
       const mine = (claimsRef.current[item.id] ?? []).find((c) => c.buyer_id === userId);
       if (!mine) return;
-      tapFeedback();
+      haptics.tap();
       const nextPurchased = mine.status !== "purchased";
       setClaims((prev) => ({
         ...prev,
@@ -201,7 +196,7 @@ export default function ListScreen() {
   // to the recipient (who must also opt in before they see it).
   const toggleReveal = useCallback(
     async (item: Item, revealed: boolean) => {
-      tapFeedback();
+      haptics.tap();
       setClaims((prev) => ({
         ...prev,
         [item.id]: (prev[item.id] ?? []).map((c) =>
@@ -225,7 +220,7 @@ export default function ListScreen() {
       const mineClaim = (claimsRef.current[item.id] ?? []).some(
         (c) => c.buyer_id === userId,
       );
-      tapFeedback();
+      haptics.tap();
       // Optimistic update.
       setClaims((prev) => {
         const cur = prev[item.id] ?? [];

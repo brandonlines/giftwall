@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { clampLen, clampQuantity, parsePriceToCents, LIMITS } from "@/lib/validation";
-import { splitUrls } from "@/lib/urls";
+import { firstUrl, splitUrls } from "@/lib/urls";
 import { pendingSharedUrl } from "@/lib/share-intent";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -77,7 +77,9 @@ export function ItemForm({
     if (initial) return;
     pendingSharedUrl.get().then((shared) => {
       if (shared) {
-        setUrl(shared);
+        // Shared text may wrap the link in chatter — pull the clean URL out,
+        // falling back to the raw string so nothing is silently dropped.
+        setUrl(firstUrl(shared) ?? shared);
         void pendingSharedUrl.clear();
       }
     });

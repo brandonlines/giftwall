@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Share, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
-import * as Linking from "expo-linking";
 import QRCode from "react-native-qrcode-svg";
 import { Button } from "@/components/ui/button";
 import { Screen } from "@/components/ui/screen";
+import { inviteMessage, inviteUrl } from "@/lib/links";
 import { groupsRepo } from "@/data/repositories/groups";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -20,15 +20,11 @@ export default function GroupQrScreen() {
     groupsRepo.get(id).then(setGroup).catch(() => {});
   }, [id]);
 
-  const url = group ? Linking.createURL(`join/${group.invite_code}`) : "";
+  const url = group ? inviteUrl(group.invite_code) : "";
 
   function share() {
     if (!group) return;
-    void Share.share({
-      message:
-        `Join "${group.name}" on giftwall:\n${url}\n\n` +
-        `Or open the app and enter code ${group.invite_code}.`,
-    });
+    void Share.share({ message: inviteMessage(group.name, group.invite_code) });
   }
 
   return (

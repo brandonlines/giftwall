@@ -11,13 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import * as Linking from "expo-linking";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
+import { inviteMessage } from "@/lib/links";
 import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
@@ -107,12 +107,7 @@ export default function GroupScreen() {
   function shareInvite() {
     if (!group) return;
     // Link carries this group's unique code, so it joins exactly this group.
-    const url = Linking.createURL(`join/${group.invite_code}`);
-    void Share.share({
-      message:
-        `Join "${group.name}" on giftwall:\n${url}\n\n` +
-        `Or open the app and enter code ${group.invite_code}.`,
-    });
+    void Share.share({ message: inviteMessage(group.name, group.invite_code) });
   }
 
   // Group cover image — any member can set/replace/remove it.

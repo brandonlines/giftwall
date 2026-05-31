@@ -10,6 +10,7 @@ import { Animated, StyleSheet, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/provider";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import * as haptics from "@/lib/haptics";
 
 type ToastKind = "info" | "error" | "success";
 type ToastState = { message: string; kind: ToastKind } | null;
@@ -33,6 +34,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     (message: string, kind: ToastKind = "info") => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       setToast({ message, kind });
+      // Tactile echo of the banner — success/error are worth feeling, info isn't.
+      if (kind === "success") haptics.success();
+      else if (kind === "error") haptics.error();
       if (reducedMotion) opacity.setValue(1);
       else Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
       hideTimer.current = setTimeout(() => {

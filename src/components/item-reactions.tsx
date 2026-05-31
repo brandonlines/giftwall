@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import * as Haptics from "expo-haptics";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import * as haptics from "@/lib/haptics";
 import { reactionsRepo } from "@/data/repositories/reactions";
 import { subscribeToReactions } from "@/data/realtime";
 import { reactionSummary, type ReactionEmoji } from "@/lib/reactions";
@@ -8,12 +8,6 @@ import { useAuth } from "@/providers/auth";
 import { useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Reaction } from "@/types/database";
-
-function tap() {
-  if (Platform.OS !== "web") {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  }
-}
 
 // Self-contained reaction bar for one item (loads + toggles its own state, so it
 // needs no plumbing through the memoized list). Reactions are group-visible —
@@ -47,7 +41,7 @@ export function ItemReactions({ itemId }: { itemId: string }) {
   async function toggle(emoji: ReactionEmoji) {
     if (!userId) return;
     const mine = rows.some((r) => r.emoji === emoji && r.user_id === userId);
-    tap();
+    haptics.tap();
     setRows((cur) =>
       mine
         ? cur.filter((r) => !(r.emoji === emoji && r.user_id === userId))
