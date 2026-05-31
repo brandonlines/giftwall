@@ -285,6 +285,14 @@ export default function ListScreen() {
           <Text style={styles.countdownText}>📅 {formatCountdown(list.event_date)}</Text>
         </View>
       ) : null}
+      {isOwner && loaded && items.length > 0 ? (
+        <View style={styles.surpriseBanner}>
+          <Text style={styles.surpriseEmoji}>🤫</Text>
+          <Text style={styles.surpriseText}>
+            This is your list — who claimed or bought each item stays hidden from you, so your gifts stay a surprise.
+          </Text>
+        </View>
+      ) : null}
       {items.length > 3 && (
         <View style={styles.searchWrap}>
           <TextInput
@@ -587,6 +595,20 @@ const makeStyles = (c: ThemeColors) =>
       alignItems: "center",
     },
     countdownText: { color: c.onAccentSoft, fontWeight: "700", fontSize: 14 },
+    surpriseBanner: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      flexDirection: "row",
+      gap: 8,
+      alignItems: "center",
+    },
+    surpriseEmoji: { fontSize: 18 },
+    surpriseText: { flex: 1, color: c.textMuted, fontSize: 13, lineHeight: 18 },
     occasionWrap: { marginTop: 24 },
     occasionRow: { flexDirection: "row", gap: 8, alignItems: "center" },
     searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
