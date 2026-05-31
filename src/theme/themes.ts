@@ -50,6 +50,7 @@ export type ThemeColors = {
 };
 
 export type ThemeKey =
+  | "signature"
   | "winterFrost"
   | "cabinCozy"
   | "firesideCozy"
@@ -64,6 +65,45 @@ export type Theme = {
 };
 
 export const themes: Record<ThemeKey, Theme> = {
+  // The brand default — matches the app icon (blue gradient, gold ribbon, white
+  // gift box on white cards).
+  signature: {
+    key: "signature",
+    name: "Signature",
+    description: "giftwall's own blue & gold.",
+    colors: {
+      background: "#EDF3FB",
+      backgroundGradient: ["#F4F8FD", "#E5EFFB"],
+      surface: "#FFFFFF",
+      text: "#0A1A2F",
+      textMuted: "#5B6B82",
+      pageText: "#0A1A2F",
+      pageTextMuted: "#54647C",
+      primary: "#1366D6",
+      onPrimary: "#FFFFFF",
+      accent: "#1366D6",
+      accentSoft: "#E3EEFB",
+      onAccentSoft: "#0F52B5",
+      claim: "#FFC94D", // the ribbon gold — the "claim a gift" pop
+      onClaim: "#3D2E00",
+      claimMine: "#1366D6",
+      onClaimMine: "#FFFFFF",
+      claimedOther: "#DCE5F0",
+      onClaimedOther: "#47586A",
+      danger: "#DC2647",
+      onDanger: "#FFFFFF",
+      border: "#DCE6F2",
+      inputBg: "#FFFFFF",
+      inputBorder: "#CFD9E6",
+      inputText: "#0A1A2F",
+      placeholder: "#9AA8BC",
+      headerBg: "#1366D6",
+      headerTint: "#FFFFFF",
+      statusBar: "light",
+      glass: false,
+    },
+  },
+
   winterFrost: {
     key: "winterFrost",
     name: "Winter Frost",
@@ -247,4 +287,4 @@ export const themes: Record<ThemeKey, Theme> = {
 };
 
 export const themeList: Theme[] = Object.values(themes);
-export const DEFAULT_THEME: ThemeKey = "winterFrost";
+export const DEFAULT_THEME: ThemeKey = "signature";
