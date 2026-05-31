@@ -117,11 +117,18 @@ export default function GroupsScreen() {
       <Stack.Screen
         options={{
           headerLeft: () => (
-            <Link href="/shopping" asChild>
-              <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Shopping">
-                <Text style={styles.headerLink}>🛍️ Shopping</Text>
-              </Pressable>
-            </Link>
+            <View style={styles.headerLeft}>
+              <Link href="/shopping" asChild>
+                <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Shopping">
+                  <Text style={styles.headerLink}>🛍️ Shopping</Text>
+                </Pressable>
+              </Link>
+              <Link href="/gift-assistant" asChild>
+                <Pressable hitSlop={10} accessibilityRole="button" accessibilityLabel="Gift ideas assistant">
+                  <Text style={styles.headerLink}>✨ Ideas</Text>
+                </Pressable>
+              </Link>
+            </View>
           ),
           headerRight: () => (
             <Link href="/profile" asChild>
@@ -355,4 +362,5 @@ const makeStyles = (c: ThemeColors) =>
       color: c.inputText,
     },
     headerLink: { color: c.accent, fontSize: 16 },
+    headerLeft: { flexDirection: "row", gap: 16, alignItems: "center" },
   });
