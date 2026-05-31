@@ -388,6 +388,38 @@ async function run() {
   const malloryComments = await mallory.client.from("item_comments").select("*").eq("item_id", i1);
   check("Outsider cannot read the discussion", (malloryComments.data?.length ?? 0) === 0);
 
+  // --- group chat ----------------------------------------------------------
+  // NOT a Surprise-Wall surface: gated on membership, so the recipient (Alice)
+  // CAN see it — it's general coordination, not claims about her gifts.
+  console.log("\nGroup chat:");
+  const bobMsg = await bob.client
+    .from("group_messages")
+    .insert({ group_id: group.id, author_id: bob.id, body: "who's hosting?" });
+  check("Member can post a group message", !bobMsg.error, bobMsg.error?.message);
+  const aliceReadMsgs = await alice.client
+    .from("group_messages")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Recipient (a member) CAN read group chat", (aliceReadMsgs.data?.length ?? 0) >= 1);
+  const carolReadMsgs = await carol.client
+    .from("group_messages")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Other member can read group chat", (carolReadMsgs.data?.length ?? 0) >= 1);
+  const malloryForgeMsg = await mallory.client
+    .from("group_messages")
+    .insert({ group_id: group.id, author_id: mallory.id, body: "let me in" });
+  check("Outsider CANNOT post to group chat", !!malloryForgeMsg.error, "expected RLS error");
+  const malloryReadMsgs = await mallory.client
+    .from("group_messages")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Outsider cannot read group chat", (malloryReadMsgs.data?.length ?? 0) === 0);
+  const carolForgeMsg = await carol.client
+    .from("group_messages")
+    .insert({ group_id: group.id, author_id: bob.id, body: "not me" });
+  check("Cannot post a message as another user", !!carolForgeMsg.error, "expected RLS error");
+
   // --- activity feed -------------------------------------------------------
   console.log("\nActivity feed:");
   const bobActivity = await bob.client.from("activity").select("*").eq("group_id", group.id);

@@ -16,6 +16,7 @@ export interface Database {
           display_name: string | null;
           avatar_url: string | null;
           shipping_address: string | null;
+          birthday: string | null;
           created_at: string;
         };
         Insert: {
@@ -23,18 +24,20 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           shipping_address?: string | null;
+          birthday?: string | null;
         };
         Update: {
           display_name?: string | null;
           avatar_url?: string | null;
           shipping_address?: string | null;
+          birthday?: string | null;
         };
         Relationships: [];
       };
       groups: {
-        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; created_at: string };
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; santa_budget_cents: number | null; created_at: string };
         Insert: { id?: string; name: string; created_by: string; event_type?: EventType };
-        Update: { name?: string; event_type?: EventType; background_url?: string | null };
+        Update: { name?: string; event_type?: EventType; background_url?: string | null; santa_budget_cents?: number | null };
         Relationships: [];
       };
       memberships: {
@@ -244,6 +247,18 @@ export interface Database {
         Update: { message?: string };
         Relationships: [];
       };
+      group_messages: {
+        Row: {
+          id: string;
+          group_id: string;
+          author_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: { id?: string; group_id: string; author_id: string; body: string };
+        Update: { body?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -289,3 +304,4 @@ export type NotificationPrefs = T["notification_preferences"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
 export type ThankYou = T["thank_yous"]["Row"];
+export type GroupMessage = T["group_messages"]["Row"];

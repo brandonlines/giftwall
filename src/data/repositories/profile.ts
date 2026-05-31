@@ -32,6 +32,16 @@ export const profileRepo = {
     if (error) throw error;
   },
 
+  // Birthday (YYYY-MM-DD). Co-members see an upcoming-birthday countdown and the
+  // occasion-reminders job nudges the group as it approaches. Pass null to clear.
+  async setBirthday(birthday: string | null): Promise<void> {
+    const uid = await currentUserId();
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ id: uid, birthday: birthday?.trim() ? birthday.trim() : null });
+    if (error) throw error;
+  },
+
   // Uploads a base64 image (from the picker) to the user's own storage folder,
   // saves the public URL on the profile, and returns it. A cache-busting query
   // param forces clients to refetch after an overwrite at the same path.

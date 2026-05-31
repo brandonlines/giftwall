@@ -16,6 +16,17 @@ export const contributionsRepo = {
     return data ?? [];
   },
 
+  // The current user's own pledges across every group — for the spending summary.
+  async mine(): Promise<Contribution[]> {
+    const uid = await currentUserId();
+    const { data, error } = await supabase
+      .from("contributions")
+      .select("*")
+      .eq("contributor_id", uid);
+    if (error) throw error;
+    return data ?? [];
+  },
+
   // Pledge (or update your existing pledge) on an item. Queues offline.
   async chipIn(itemId: string, amountCents: number, note?: string | null): Promise<void> {
     try {

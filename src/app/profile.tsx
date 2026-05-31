@@ -21,6 +21,7 @@ import {
   type NotificationSettings,
 } from "@/data/repositories/notifications";
 import { accountRepo } from "@/data/repositories/account";
+import { isValidDateStr } from "@/lib/dates";
 import { signOut } from "@/lib/auth";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
@@ -33,6 +34,7 @@ export default function ProfileScreen() {
   const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [birthday, setBirthday] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,6 +50,7 @@ export default function ProfileScreen() {
       .then(([p, n]) => {
         setName(p?.display_name ?? "");
         setAddress(p?.shipping_address ?? "");
+        setBirthday(p?.birthday ?? "");
         setAvatar(p?.avatar_url ?? null);
         setPrefs(n);
       })
@@ -89,10 +92,16 @@ export default function ProfileScreen() {
   }
 
   async function save() {
+    const trimmedBday = birthday.trim();
+    if (trimmedBday && !isValidDateStr(trimmedBday)) {
+      Alert.alert("Check your birthday", "Use a date like 1990-07-23 (year-month-day).");
+      return;
+    }
     setSaving(true);
     try {
       await profileRepo.setDisplayName(name.trim());
       await profileRepo.setShippingAddress(address);
+      await profileRepo.setBirthday(trimmedBday || null);
       router.back();
     } catch (e) {
       Alert.alert("Couldn't save", String((e as Error).message));
@@ -182,6 +191,24 @@ export default function ProfileScreen() {
           multiline
           numberOfLines={3}
           accessibilityLabel="Shipping address"
+        />
+
+        <Text style={[styles.label, { marginTop: 20 }]}>Birthday</Text>
+        <Text style={styles.hint}>
+          Optional. Your groups get a friendly heads-up as it approaches — you
+          won&apos;t be reminded about your own.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor={colors.placeholder}
+          value={birthday}
+          onChangeText={setBirthday}
+          editable={!loading}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="numbers-and-punctuation"
+          accessibilityLabel="Birthday, format year-month-day"
         />
         <Button title="Save" onPress={save} loading={saving} />
 

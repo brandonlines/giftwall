@@ -2,7 +2,9 @@
 // A once-a-day scheduled job. Finds wishlists whose occasion lands 7/3/1/0 days
 // out (rolling yearly-recurring dates forward to their next anniversary) and
 // pushes a reminder to each group's members EXCEPT the list owner — the givers —
-// who haven't turned off the `occasion_reminder` preference.
+// who haven't turned off the `occasion_reminder` preference. It also turns each
+// member's profile birthday into an automatic occasion, reminding their shared
+// groups (everyone but the birthday person) on the same 7/3/1/0-day schedule.
 //
 // The date logic mirrors reminderDueDays() in src/lib/dates.ts, which is
 // unit-tested. Because thresholds are exact day counts and this runs daily, each
@@ -50,6 +52,12 @@ function reminderBody(days: number, title: string): string {
   if (days === 0) return `${title} is today! 🎁`;
   if (days === 1) return `${title} is tomorrow 🎁`;
   return `${days} days until ${title} 🎁`;
+}
+
+function birthdayBody(days: number, name: string): string {
+  if (days === 0) return `${name}'s birthday is today! 🎂`;
+  if (days === 1) return `${name}'s birthday is tomorrow 🎂`;
+  return `${days} days until ${name}'s birthday 🎂`;
 }
 
 type PushMessage = { to: string; sound: string; title: string; body: string; data: unknown };
@@ -114,6 +122,65 @@ Deno.serve(async (req) => {
     }
   }
 
+  // --- birthdays → automatic occasions -------------------------------------
+  // A member's birthday reminds the rest of each shared group (the givers) as it
+  // approaches — never the birthday person themselves. Birthdays always recur
+  // yearly, so we roll forward to the next anniversary like any occasion.
+  const { data: birthdayProfiles } = await admin
+    .from("profiles")
+    .select("id, display_name, birthday")
+    .not("birthday", "is", null);
+
+  const dueBirthdays = (birthdayProfiles ?? [])
+    .map((p) => ({ p, days: reminderDueDays(p.birthday as string, true, now) }))
+    .filter((x): x is { p: typeof x.p; days: number } => x.days !== null);
+
+  for (const { p, days } of dueBirthdays) {
+    // The groups the birthday person belongs to…
+    const { data: theirGroups } = await admin
+      .from("memberships")
+      .select("group_id")
+      .eq("user_id", p.id);
+    const groupIds = (theirGroups ?? []).map((g) => g.group_id);
+    if (groupIds.length === 0) continue;
+
+    // …and their co-members across those groups (the givers), deduped, minus
+    // the birthday person. A shared-group check keeps it from leaking to
+    // strangers who happen to have set a birthday.
+    const { data: coMembers } = await admin
+      .from("memberships")
+      .select("user_id")
+      .in("group_id", groupIds)
+      .neq("user_id", p.id);
+    const ids = [...new Set((coMembers ?? []).map((m) => m.user_id))];
+    if (ids.length === 0) continue;
+
+    const { data: prefs } = await admin
+      .from("notification_preferences")
+      .select("user_id, occasion_reminder")
+      .in("user_id", ids);
+    const optedOut = new Set(
+      (prefs ?? []).filter((pr) => pr.occasion_reminder === false).map((pr) => pr.user_id),
+    );
+    const notifyIds = ids.filter((id) => !optedOut.has(id));
+    if (notifyIds.length === 0) continue;
+
+    const { data: tokens } = await admin
+      .from("push_tokens")
+      .select("token")
+      .in("user_id", notifyIds);
+    const name = p.display_name ?? "A group member";
+    for (const t of tokens ?? []) {
+      messages.push({
+        to: t.token,
+        sound: "default",
+        title: "Birthday coming up",
+        body: birthdayBody(days, name),
+        data: { birthdayUserId: p.id },
+      });
+    }
+  }
+
   // Expo accepts up to 100 messages per request; chunk and prune dead tokens.
   let sent = 0;
   for (let i = 0; i < messages.length; i += 100) {
@@ -136,7 +203,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ occasions: due.length, sent }), {
-    headers: { "Content-Type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify({ occasions: due.length, birthdays: dueBirthdays.length, sent }),
+    { headers: { "Content-Type": "application/json" } },
+  );
 });

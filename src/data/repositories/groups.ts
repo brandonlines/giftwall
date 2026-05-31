@@ -8,6 +8,7 @@ export type MemberWithProfile = {
   displayName: string | null;
   avatarUrl: string | null;
   shippingAddress: string | null;
+  birthday: string | null;
 };
 
 // Repositories are the only place app code talks to Supabase. The UI depends on
@@ -76,7 +77,7 @@ export const groupsRepo = {
 
     const { data: profiles, error: pErr } = await supabase
       .from("profiles")
-      .select("id, display_name, avatar_url, shipping_address")
+      .select("id, display_name, avatar_url, shipping_address, birthday")
       .in("id", ids);
     if (pErr) throw pErr;
 
@@ -89,6 +90,7 @@ export const groupsRepo = {
         displayName: p?.display_name ?? null,
         avatarUrl: p?.avatar_url ?? null,
         shippingAddress: p?.shipping_address ?? null,
+        birthday: p?.birthday ?? null,
       };
     });
   },
@@ -188,6 +190,16 @@ export const groupsRepo = {
       p_group_id: groupId,
       p_url: null,
     });
+    if (error) throw error;
+  },
+
+  // Admin-only (enforced by the groups UPDATE policy): set/clear the Secret
+  // Santa spending cap.
+  async setSantaBudget(groupId: string, cents: number | null): Promise<void> {
+    const { error } = await supabase
+      .from("groups")
+      .update({ santa_budget_cents: cents })
+      .eq("id", groupId);
     if (error) throw error;
   },
 };

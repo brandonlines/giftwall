@@ -8,9 +8,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { shoppingRepo, type ShoppingEntry } from "@/data/repositories/shopping";
 import { claimsRepo } from "@/data/repositories/claims";
+import { contributionsRepo } from "@/data/repositories/contributions";
 import { formatPrice } from "@/lib/format";
+import { spendingTotals } from "@/lib/spending";
 import { useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
+import type { Contribution } from "@/types/database";
 
 type Section = { title: string; subtitle: string; data: ShoppingEntry[] };
 
@@ -19,19 +22,27 @@ export default function ShoppingScreen() {
   const showToast = useToast();
   const router = useRouter();
   const [entries, setEntries] = useState<ShoppingEntry[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"tobuy" | "purchased">("tobuy");
   const [sort, setSort] = useState<"group" | "name">("group");
 
   const load = useCallback(async () => {
     try {
-      setEntries(await shoppingRepo.mine());
+      const [e, c] = await Promise.all([shoppingRepo.mine(), contributionsRepo.mine()]);
+      setEntries(e);
+      setContributions(c);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load", "error");
     } finally {
       setLoaded(true);
     }
   }, [showToast]);
+
+  const totals = useMemo(
+    () => spendingTotals(entries.map((e) => e.priceCents), contributions.map((c) => c.amount_cents)),
+    [entries, contributions],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -113,16 +124,32 @@ export default function ShoppingScreen() {
         keyExtractor={(e) => e.claimId}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
-          entries.length > 0 ? (
-            <View style={styles.controls}>
-              <View style={styles.segment}>
-                <SegBtn label={`🛒 To buy (${remaining})`} on={filter === "tobuy"} onPress={() => setFilter("tobuy")} />
-                <SegBtn label={`✅ Purchased (${purchasedCount})`} on={filter === "purchased"} onPress={() => setFilter("purchased")} />
-              </View>
-              <View style={styles.segment}>
-                <SegBtn label="By group" on={sort === "group"} onPress={() => setSort("group")} />
-                <SegBtn label="By name" on={sort === "name"} onPress={() => setSort("name")} />
-              </View>
+          entries.length > 0 || totals.totalCents > 0 ? (
+            <View>
+              {totals.totalCents > 0 ? (
+                <Card style={styles.summaryCard}>
+                  <Text style={styles.summaryTotal}>
+                    💸 You&apos;ve committed ~{formatPrice(totals.totalCents, null)}
+                  </Text>
+                  <Text style={styles.summaryBreakdown}>
+                    {formatPrice(totals.claimedCents, null)} in gifts ·{" "}
+                    {formatPrice(totals.chippedCents, null)} chipped in · {totals.giftCount}{" "}
+                    {totals.giftCount === 1 ? "gift" : "gifts"}
+                  </Text>
+                </Card>
+              ) : null}
+              {entries.length > 0 ? (
+                <View style={styles.controls}>
+                  <View style={styles.segment}>
+                    <SegBtn label={`🛒 To buy (${remaining})`} on={filter === "tobuy"} onPress={() => setFilter("tobuy")} />
+                    <SegBtn label={`✅ Purchased (${purchasedCount})`} on={filter === "purchased"} onPress={() => setFilter("purchased")} />
+                  </View>
+                  <View style={styles.segment}>
+                    <SegBtn label="By group" on={sort === "group"} onPress={() => setSort("group")} />
+                    <SegBtn label="By name" on={sort === "name"} onPress={() => setSort("name")} />
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null
         }
@@ -215,6 +242,9 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
     headerLink: { color: c.headerTint, fontWeight: "700", fontSize: 15 },
+    summaryCard: { padding: 16, marginBottom: 12, gap: 4 },
+    summaryTotal: { fontSize: 18, fontWeight: "800", color: c.text },
+    summaryBreakdown: { fontSize: 13, color: c.textMuted },
     controls: { gap: 8, marginBottom: 12 },
     segment: { flexDirection: "row", gap: 8 },
     segBtn: {
