@@ -20,6 +20,7 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { ItemForm } from "@/components/item-form";
+import { ItemReactions } from "@/components/item-reactions";
 import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
 import { isSafeHttpUrl } from "@/lib/validation";
@@ -499,6 +500,8 @@ const ItemRow = memo(function ItemRow({
             <Text style={styles.link}>View product ↗</Text>
           </Pressable>
         )}
+
+        <ItemReactions itemId={item.id} />
 
         {/* Owner: manage the item. Surprise Wall hides all claim state from them. */}
         {isOwner ? (
