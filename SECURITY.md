@@ -99,8 +99,12 @@ one.
   link-local / CGNAT ranges (incl. `169.254.169.254` cloud metadata); redirects
   followed manually so every hop is re-validated; response capped at 1 MB with
   an 8 s timeout.
-- **send-push** reads tokens with the service role to fan out to group members.
-  It authenticates the webhook caller via `WEBHOOK_SECRET`.
+- **send-push** runs with `verify_jwt = false` (it's a DB webhook), so
+  `WEBHOOK_SECRET` is its *only* auth gate. It fails **closed** — refusing to run
+  if the secret is unset rather than accepting anonymous triggers — and compares
+  the `x-webhook-secret` header in constant time. (Its push title/body come from
+  the request payload, so an open endpoint would be a push-phishing vector.) It
+  then reads tokens with the service role to fan out to group members.
 - **delete-account** uses the caller's JWT to identify the user, then the service
   role to erase their data (account deletion / GDPR-style export path).
 
