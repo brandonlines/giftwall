@@ -16,8 +16,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { GiftLogo } from "@/components/gift-logo";
 import { useToast } from "@/components/ui/toast";
 import { groupsRepo } from "@/data/repositories/groups";
+import { dashboardRepo, type UpcomingOccasion } from "@/data/repositories/dashboard";
 import { pendingInvite } from "@/lib/pending-invite";
 import { pendingSharedUrl } from "@/lib/share-intent";
+import { occasionCountdown } from "@/lib/dates";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { EventType, Group } from "@/types/database";
@@ -30,6 +32,7 @@ export default function GroupsScreen() {
   const styles = useThemedStyles(makeStyles);
   const showToast = useToast();
   const [groups, setGroups] = useState<Group[]>([]);
+  const [occasions, setOccasions] = useState<UpcomingOccasion[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
@@ -43,6 +46,8 @@ export default function GroupsScreen() {
     setRefreshing(true);
     try {
       setGroups(await groupsRepo.listMine());
+      // The dashboard is a nice-to-have nudge — never block the group list on it.
+      dashboardRepo.upcoming().then(setOccasions).catch(() => {});
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load groups", "error");
     } finally {
@@ -138,6 +143,11 @@ export default function GroupsScreen() {
           />
         }
         contentContainerStyle={styles.listContent}
+        ListHeaderComponent={
+          groups.length > 0 ? (
+            <Dashboard occasions={occasions} onSearch={() => router.push("/search")} onOpenList={(lid) => router.push(`/list/${lid}`)} />
+          ) : null
+        }
         ListEmptyComponent={
           !loaded ? (
             <View style={styles.skeletons}>
@@ -211,6 +221,69 @@ export default function GroupsScreen() {
   );
 }
 
+// Home dashboard: a search entry plus the soonest occasions across all groups,
+// with a "still unclaimed" nudge for other people's lists (never your own —
+// the Surprise Wall means that count is always 0 there).
+function Dashboard({
+  occasions,
+  onSearch,
+  onOpenList,
+}: {
+  occasions: UpcomingOccasion[];
+  onSearch: () => void;
+  onOpenList: (listId: string) => void;
+}) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <View style={styles.dashboard}>
+      <Card style={styles.searchRow} onPress={onSearch} accessibilityLabel="Search gifts and people">
+        <Text style={styles.searchIcon} accessibilityElementsHidden importantForAccessibility="no">
+          🔎
+        </Text>
+        <Text style={styles.searchText}>Search gifts & people</Text>
+      </Card>
+
+      {occasions.length > 0 ? (
+        <View style={styles.upcoming}>
+          <Text style={styles.sectionLabel} accessibilityRole="header">
+            Coming up
+          </Text>
+          {occasions.map((o) => {
+            const countdown =
+              occasionCountdown(o.wishlist.event_date!, o.wishlist.recurs_yearly) ?? "";
+            const nudge = o.isMine
+              ? "Your list"
+              : o.unclaimed > 0
+                ? `${o.unclaimed} gift${o.unclaimed === 1 ? "" : "s"} unclaimed`
+                : "All claimed 🎉";
+            return (
+              <Card
+                key={o.wishlist.id}
+                style={styles.occasionRow}
+                onPress={() => onOpenList(o.wishlist.id)}
+                accessibilityLabel={`${o.wishlist.title}, ${countdown}. ${nudge}.`}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.occasionTitle} numberOfLines={1}>
+                    {o.wishlist.title}
+                    {o.groupName ? ` · ${o.groupName}` : ""}
+                  </Text>
+                  <Text style={styles.occasionMeta}>
+                    📅 {countdown} · {nudge}
+                  </Text>
+                </View>
+                <Text style={styles.rowChevron} accessibilityElementsHidden importantForAccessibility="no">
+                  ›
+                </Text>
+              </Card>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const GroupRow = memo(function GroupRow({
   group,
   onOpen,
@@ -232,6 +305,14 @@ const GroupRow = memo(function GroupRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     listContent: { padding: 16, gap: 8 },
+    dashboard: { gap: 8, marginBottom: 8 },
+    searchRow: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
+    searchIcon: { fontSize: 16 },
+    searchText: { fontSize: 16, color: c.textMuted, fontWeight: "600" },
+    upcoming: { gap: 8, marginTop: 4 },
+    occasionRow: { flexDirection: "row", alignItems: "center", padding: 14 },
+    occasionTitle: { fontSize: 16, fontWeight: "700", color: c.text },
+    occasionMeta: { fontSize: 13, color: c.textMuted, marginTop: 2 },
     skeletons: { gap: 8 },
     hero: { alignItems: "center", paddingVertical: 36, paddingHorizontal: 24, gap: 12 },
     heroTitle: { fontSize: 22, fontWeight: "800", color: c.pageText },

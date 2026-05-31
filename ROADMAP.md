@@ -6,6 +6,22 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 
 ## ✅ Shipped recently
 
+- **Home dashboard** — the groups screen surfaces the soonest occasions across
+  every group with a "still unclaimed" nudge for other people's lists (0 /
+  hidden for your own — Surprise Wall), plus a one-tap entry to search.
+- **Global search** — find any gift or person across all your groups
+  (`/search`); RLS scopes results and your own items read "Your list" with no
+  claim state leaked.
+- **Reserve for later** — a soft "thinking about this" signal that sits below a
+  hard claim and never blocks one. New `reservations` table reuses the exact
+  `can_see_claims_for_item` Surprise-Wall predicate (now in the RLS suite).
+- **Multiple photos per item** — items carry an ordered `images[]`; the first is
+  the cover (kept on `image_url` for back-compat). Add/remove several in the
+  item form; extra shots show in a strip on the list.
+- **Accessibility pass** — VoiceOver/TalkBack labels, roles and states across
+  every screen; decorative art hidden; Dynamic Type capped on fixed-height text.
+- **Deep links + share intent** — env-aware https invite links (universal-link
+  ready) + cleaner shared-URL extraction; broad haptics routed through the toast.
 - **Secret Santa + event types** — secret server-side derangement, per-group
   event type, and **exclusions** (couples never drawn together).
 - **Recurring yearly occasions** — birthdays roll forward instead of "300 days
@@ -29,9 +45,10 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 ## ⚠️ Operator to-do (not code)
 
 - **Apply migrations + redeploy** so the above goes live:
-  `npx supabase db push` (0017–0026); `npx supabase functions deploy scrape-link
-  send-push delete-account occasion-reminders`; then `npx eas update --branch
-  production`. Re-run `npm run test:rls` after the push.
+  `npx supabase db push` (through 0030 — 0030 adds `reservations` + items.`images`);
+  `npx supabase functions deploy scrape-link send-push delete-account
+  occasion-reminders`; then `npx eas update --branch production`. Re-run
+  `npm run test:rls` after the push (it now also asserts the reservations wall).
 - **Set `WEBHOOK_SECRET`** (function secret + the webhook's `x-webhook-secret`
   header) — send-push and occasion-reminders both refuse to run without it.
 - **Schedule `occasion-reminders`** once a day (Supabase Scheduled Functions, or
@@ -58,9 +75,8 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 
 ## Nice-to-haves / later
 
-Global search across groups · wishlist item reordering · multiple photos per item ·
-"reserve for later" soft-interest vs hard claim · richer profiles · web-app polish ·
-group themes/cover photos · per-occasion (not global) shipping addresses.
+Wishlist item reordering · richer profiles · web-app polish · per-occasion (not
+global) shipping addresses · reorder/curate an item's multiple photos.
 
 ---
 

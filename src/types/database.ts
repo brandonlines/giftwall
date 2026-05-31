@@ -77,6 +77,7 @@ export interface Database {
           title: string;
           url: string | null;
           image_url: string | null;
+          images: string[];
           price_cents: number | null;
           currency: string | null;
           note: string | null;
@@ -91,6 +92,7 @@ export interface Database {
           title: string;
           url?: string | null;
           image_url?: string | null;
+          images?: string[];
           price_cents?: number | null;
           currency?: string | null;
           note?: string | null;
@@ -102,6 +104,7 @@ export interface Database {
           title?: string;
           url?: string | null;
           image_url?: string | null;
+          images?: string[];
           price_cents?: number | null;
           currency?: string | null;
           note?: string | null;
@@ -148,6 +151,12 @@ export interface Database {
         Row: { item_id: string; user_id: string; emoji: string; created_at: string };
         Insert: { item_id: string; user_id: string; emoji: string };
         Update: { emoji?: string };
+        Relationships: [];
+      };
+      reservations: {
+        Row: { id: string; item_id: string; user_id: string; created_at: string };
+        Insert: { id?: string; item_id: string; user_id: string };
+        Update: { item_id?: string; user_id?: string };
         Relationships: [];
       };
       santa_assignments: {
@@ -269,6 +278,7 @@ export type Item = T["items"]["Row"];
 export type Claim = T["claims"]["Row"];
 export type Contribution = T["contributions"]["Row"];
 export type Reaction = T["reactions"]["Row"];
+export type Reservation = T["reservations"]["Row"];
 export type SantaAssignment = T["santa_assignments"]["Row"];
 export type SantaExclusion = T["santa_exclusions"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];

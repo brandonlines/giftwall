@@ -12,11 +12,13 @@ export type OfflineItemFields = {
   title: string;
   url?: string | null;
   image_url?: string | null;
+  images?: string[];
   price_cents?: number | null;
   currency?: string | null;
   note?: string | null;
   quantity?: number;
   is_priority?: boolean;
+  is_group_gift?: boolean;
 };
 
 export type QueuedMutation =

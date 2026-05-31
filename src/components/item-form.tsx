@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -23,7 +24,8 @@ import type { Item } from "@/types/database";
 export type ItemFormValue = {
   title: string;
   url: string | null;
-  image_url: string | null;
+  image_url: string | null; // cover (= images[0]); kept for back-compat readers
+  images: string[];
   price_cents: number | null;
   currency: string | null;
   note: string | null;
@@ -31,6 +33,13 @@ export type ItemFormValue = {
   is_priority: boolean;
   is_group_gift: boolean;
 };
+
+// An item's photos: prefer the new `images` array, falling back to the single
+// legacy `image_url` so items created before multi-photo still show their cover.
+function initialImages(initial?: Partial<Item>): string[] {
+  if (initial?.images && initial.images.length > 0) return initial.images;
+  return initial?.image_url ? [initial.image_url] : [];
+}
 
 // Shared form for creating and editing an item. Handles link scraping and
 // surfaces title / price / quantity / note. Returns a fully-built value object
@@ -56,7 +65,7 @@ export function ItemForm({
   );
   const [quantityText, setQuantityText] = useState(String(initial?.quantity ?? 1));
   const [note, setNote] = useState(initial?.note ?? "");
-  const [imageUrl, setImageUrl] = useState<string | null>(initial?.image_url ?? null);
+  const [images, setImages] = useState<string[]>(() => initialImages(initial));
   const [currency, setCurrency] = useState<string | null>(initial?.currency ?? null);
   const [isPriority, setIsPriority] = useState(initial?.is_priority ?? false);
   const [isGroupGift, setIsGroupGift] = useState(initial?.is_group_gift ?? false);
@@ -100,7 +109,7 @@ export function ItemForm({
         asset.base64!,
         asset.mimeType ?? "image/jpeg",
       );
-      setImageUrl(uploaded);
+      setImages((prev) => [...prev, uploaded]);
     } catch (e) {
       Alert.alert("Couldn't upload photo", String((e as Error).message));
     } finally {
@@ -114,7 +123,9 @@ export function ItemForm({
     try {
       const p = await scrapeRepo.fromUrl(url.trim());
       if (p.title) setTitle(p.title);
-      if (p.image) setImageUrl(p.image);
+      // Use the scraped image as the cover only if no photos are set yet, so it
+      // never clobbers ones the user added by hand.
+      if (p.image) setImages((prev) => (prev.length === 0 ? [p.image!] : prev));
       if (p.currency) setCurrency(p.currency);
       if (p.price_cents != null) setPriceText((p.price_cents / 100).toFixed(2));
     } catch {
@@ -130,7 +141,7 @@ export function ItemForm({
     setPriceText("");
     setQuantityText("1");
     setNote("");
-    setImageUrl(null);
+    setImages([]);
     setCurrency(null);
     setIsPriority(false);
     setIsGroupGift(false);
@@ -161,6 +172,7 @@ export function ItemForm({
             title: clampLen(itemTitle, LIMITS.title),
             url: u,
             image_url: image,
+            images: image ? [image] : [],
             price_cents: priceCents,
             currency: curr,
             note: null,
@@ -182,7 +194,8 @@ export function ItemForm({
       await onSubmit({
         title: clampLen(title, LIMITS.title),
         url: url.trim() || null,
-        image_url: imageUrl,
+        image_url: images[0] ?? null,
+        images,
         price_cents: parsePriceToCents(priceText),
         currency,
         note: note.trim() ? clampLen(note, LIMITS.note) : null,
@@ -267,34 +280,48 @@ export function ItemForm({
         accessibilityLabel="Note"
       />
 
-      <View style={styles.photoRow}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.photo} />
-        ) : (
-          <View style={[styles.photo, styles.photoEmpty]}>
-            <Text style={styles.photoEmptyText} accessibilityElementsHidden importantForAccessibility="no">
-              🎁
-            </Text>
-          </View>
-        )}
-        <View style={styles.photoActions}>
-          <Button
-            title={imageUrl ? "Change photo" : "Add photo"}
-            variant="secondary"
-            onPress={pickPhoto}
-            loading={uploading}
-          />
-          {imageUrl ? (
-            <Pressable
-              onPress={() => setImageUrl(null)}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Remove photo"
-            >
-              <Text style={styles.removePhoto}>Remove photo</Text>
-            </Pressable>
-          ) : null}
-        </View>
+      <View style={styles.photoSection}>
+        {images.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoStrip}
+          >
+            {images.map((uri, i) => (
+              <View key={uri} style={styles.photoThumbWrap}>
+                <Image
+                  source={{ uri }}
+                  style={styles.photo}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+                {i === 0 ? (
+                  <View style={styles.coverBadge}>
+                    <Text style={styles.coverBadgeText}>Cover</Text>
+                  </View>
+                ) : null}
+                <Pressable
+                  onPress={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                  hitSlop={8}
+                  style={styles.removeThumb}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove photo ${i + 1}`}
+                >
+                  <Text style={styles.removeThumbText}>✕</Text>
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+        <Button
+          title={images.length > 0 ? "Add another photo" : "Add photo"}
+          variant="secondary"
+          onPress={pickPhoto}
+          loading={uploading}
+        />
+        {images.length > 1 ? (
+          <Text style={styles.tip}>The first photo is the cover.</Text>
+        ) : null}
       </View>
 
       <Pressable
@@ -342,12 +369,32 @@ const makeStyles = (c: ThemeColors) =>
       color: c.inputText,
     },
     noteInput: { minHeight: 72, textAlignVertical: "top" },
-    photoRow: { flexDirection: "row", gap: 12, alignItems: "center", marginBottom: 10 },
-    photo: { width: 64, height: 64, borderRadius: 8, backgroundColor: c.border },
-    photoEmpty: { alignItems: "center", justifyContent: "center" },
-    photoEmptyText: { fontSize: 26 },
-    photoActions: { flex: 1, gap: 6 },
-    removePhoto: { color: c.danger, fontWeight: "600", textAlign: "center" },
+    photoSection: { gap: 8, marginBottom: 10 },
+    photoStrip: { gap: 8, paddingVertical: 2 },
+    photoThumbWrap: { position: "relative" },
+    photo: { width: 72, height: 72, borderRadius: 8, backgroundColor: c.border },
+    coverBadge: {
+      position: "absolute",
+      left: 4,
+      bottom: 4,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      borderRadius: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    coverBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "700" },
+    removeThumb: {
+      position: "absolute",
+      top: -6,
+      right: -6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: c.danger,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    removeThumbText: { color: c.onDanger, fontSize: 12, fontWeight: "800" },
     priorityRow: {
       borderWidth: 1,
       borderColor: c.inputBorder,

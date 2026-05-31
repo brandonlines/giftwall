@@ -206,6 +206,25 @@ async function run() {
   const mq3 = await dave.client.from("claims").insert({ item_id: multi.id, buyer_id: dave.id });
   check("Third buyer rejected once fully claimed (cap)", !!mq3.error, "expected cap error");
 
+  // --- reservations (soft interest) — Surprise Wall applies ----------------
+  console.log("\nSurprise Wall (reservations):");
+  const bobReserve = await bob.client.from("reservations").insert({ item_id: i2, user_id: bob.id });
+  check("Member (Bob) can reserve an item", !bobReserve.error, bobReserve.error?.message);
+  const aliceResv = await alice.client.from("reservations").select("*").eq("item_id", i2);
+  check(
+    "Recipient (Alice) CANNOT see reservations on her own item",
+    (aliceResv.data?.length ?? 0) === 0,
+    "SURPRISE WALL BREACH",
+  );
+  const carolResv = await carol.client.from("reservations").select("*").eq("item_id", i2);
+  check("Other member (Carol) sees the reservation exists", (carolResv.data?.length ?? 0) === 1);
+  const malloryResv = await mallory.client.from("reservations").select("*").eq("item_id", i2);
+  check("Outsider (Mallory) sees no reservations", (malloryResv.data?.length ?? 0) === 0);
+  const aliceResvOwn = await alice.client
+    .from("reservations")
+    .insert({ item_id: i2, user_id: alice.id });
+  check("Recipient CANNOT reserve her own item", !!aliceResvOwn.error, "expected error");
+
   // --- comments ------------------------------------------------------------
   // --- group gifting (contributions) — Surprise Wall applies ---------------
   console.log("\nGroup gifting (contributions):");

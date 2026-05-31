@@ -4,6 +4,7 @@ import {
   FlatList,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -23,20 +24,23 @@ import { ItemForm } from "@/components/item-form";
 import { ItemReactions } from "@/components/item-reactions";
 import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
+import { deriveReserveState } from "@/lib/reserve-state";
 import { isSafeHttpUrl } from "@/lib/validation";
 import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
+import { reservationsRepo } from "@/data/repositories/reservations";
 import { scrapeRepo } from "@/data/repositories/scrape";
 import { groupsRepo } from "@/data/repositories/groups";
-import { subscribeToClaims } from "@/data/realtime";
+import { subscribeToClaims, subscribeToReservations } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
-import type { Claim, Item, Wishlist } from "@/types/database";
+import type { Claim, Item, Reservation, Wishlist } from "@/types/database";
 
-// Stable empty reference so memoized rows with no claims don't re-render.
+// Stable empty references so memoized rows with no claims/reservations don't re-render.
 const NO_CLAIMS: Claim[] = [];
+const NO_RESERVATIONS: Reservation[] = [];
 
 // Prompts to seed an empty list — tapping one prefills the add form's name.
 const GIFT_CATEGORIES = [
@@ -60,6 +64,7 @@ export default function ListScreen() {
   const [list, setList] = useState<Wishlist | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Record<string, Claim[]>>({});
+  const [reservations, setReservations] = useState<Record<string, Reservation[]>>({});
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [seedTitle, setSeedTitle] = useState<string | undefined>();
@@ -75,6 +80,10 @@ export default function ListScreen() {
   useEffect(() => {
     claimsRef.current = claims;
   }, [claims]);
+  const reservationsRef = useRef(reservations);
+  useEffect(() => {
+    reservationsRef.current = reservations;
+  }, [reservations]);
 
   const isOwner = list?.owner_id === user?.id;
   const q = query.trim().toLowerCase();
@@ -93,6 +102,13 @@ export default function ListScreen() {
     setClaims(byItem);
   }, []);
 
+  const refreshReservations = useCallback(async (currentItems: Item[]) => {
+    const rows = await reservationsRepo.forItems(currentItems.map((i) => i.id));
+    const byItem: Record<string, Reservation[]> = {};
+    for (const r of rows) (byItem[r.item_id] ??= []).push(r);
+    setReservations(byItem);
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const [w, its] = await Promise.all([
@@ -109,12 +125,14 @@ export default function ListScreen() {
         .then((g) => setCoverUrl(g.background_url))
         .catch(() => {});
       await refreshClaims(its);
+      // Reservations follow the same Surprise Wall — the owner gets an empty set.
+      if (w.owner_id !== userId) void refreshReservations(its);
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load list", "error");
     } finally {
       setLoaded(true);
     }
-  }, [id, refreshClaims, showToast]);
+  }, [id, userId, refreshClaims, refreshReservations, showToast]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,11 +144,17 @@ export default function ListScreen() {
   // owner's device never receives these events for their own list.
   useEffect(() => {
     if (isOwner) return; // owner sees no claim data by design
-    const unsub = subscribeToClaims(() => {
+    const unsubClaims = subscribeToClaims(() => {
       void wishlistsRepo.items(id).then(refreshClaims);
     });
-    return unsub;
-  }, [id, isOwner, refreshClaims]);
+    const unsubReservations = subscribeToReservations(() => {
+      void wishlistsRepo.items(id).then(refreshReservations);
+    });
+    return () => {
+      unsubClaims();
+      unsubReservations();
+    };
+  }, [id, isOwner, refreshClaims, refreshReservations]);
 
   const confirmDelete = useCallback((item: Item) => {
     Alert.alert("Delete item", `Remove "${item.title}"?`, [
@@ -248,6 +272,38 @@ export default function ListScreen() {
       } catch (e) {
         showToast(String((e as Error).message) || "Claim failed", "error");
         await load(); // reconcile from server
+      }
+    },
+    [userId, load, showToast],
+  );
+
+  // Soft interest: a "thinking about this" flag that never blocks a claim.
+  const toggleReserve = useCallback(
+    async (item: Item) => {
+      if (!userId) return;
+      const mineReserved = (reservationsRef.current[item.id] ?? []).some(
+        (r) => r.user_id === userId,
+      );
+      haptics.tap();
+      setReservations((prev) => {
+        const cur = prev[item.id] ?? [];
+        if (mineReserved) {
+          return { ...prev, [item.id]: cur.filter((r) => r.user_id !== userId) };
+        }
+        return {
+          ...prev,
+          [item.id]: [
+            ...cur,
+            { id: "optimistic", item_id: item.id, user_id: userId, created_at: new Date().toISOString() },
+          ],
+        };
+      });
+      try {
+        if (mineReserved) await reservationsRepo.release(item.id);
+        else await reservationsRepo.reserve(item.id);
+      } catch (e) {
+        showToast(String((e as Error).message) || "Couldn't update", "error");
+        await load();
       }
     },
     [userId, load, showToast],
@@ -401,11 +457,13 @@ export default function ListScreen() {
           <ItemRow
             item={item}
             claims={claims[item.id]}
+            reservations={reservations[item.id]}
             isOwner={isOwner}
             currentUserId={userId}
             onToggle={toggleClaim}
             onTogglePurchased={togglePurchased}
             onToggleReveal={toggleReveal}
+            onReserve={toggleReserve}
             onEdit={openEditItem}
             onDelete={confirmDelete}
             onDiscuss={openDiscuss}
@@ -494,11 +552,13 @@ export default function ListScreen() {
 const ItemRow = memo(function ItemRow({
   item,
   claims,
+  reservations,
   isOwner,
   currentUserId,
   onToggle,
   onTogglePurchased,
   onToggleReveal,
+  onReserve,
   onEdit,
   onDelete,
   onDiscuss,
@@ -509,11 +569,13 @@ const ItemRow = memo(function ItemRow({
 }: {
   item: Item;
   claims?: Claim[];
+  reservations?: Reservation[];
   isOwner: boolean;
   currentUserId?: string;
   onToggle: (item: Item) => void;
   onTogglePurchased: (item: Item) => void;
   onToggleReveal: (item: Item, revealed: boolean) => void;
+  onReserve: (item: Item) => void;
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onDiscuss: (item: Item) => void;
@@ -528,14 +590,19 @@ const ItemRow = memo(function ItemRow({
     currentUserId,
     item.quantity,
   );
+  const reserve = deriveReserveState(reservations ?? NO_RESERVATIONS, currentUserId);
   const multi = item.quantity > 1;
   const countLabel = `${count} of ${item.quantity} claimed`;
+  // Cover = first photo (falls back to the legacy single image); the rest show
+  // in a strip below so an item can carry several pictures.
+  const cover = item.images?.[0] ?? item.image_url;
+  const extraPhotos = (item.images ?? []).slice(1);
 
   return (
     <Card style={styles.item}>
-      {item.image_url ? (
+      {cover ? (
         <Image
-          source={{ uri: item.image_url }}
+          source={{ uri: cover }}
           style={styles.thumb}
           accessibilityElementsHidden
           importantForAccessibility="no"
@@ -566,6 +633,25 @@ const ItemRow = memo(function ItemRow({
           {priceChanged && <Text style={styles.priceBadge}>↓ price changed</Text>}
         </View>
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
+
+        {extraPhotos.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoStrip}
+            accessibilityLabel={`${item.images.length} photos`}
+          >
+            {extraPhotos.map((uri) => (
+              <Image
+                key={uri}
+                source={{ uri }}
+                style={styles.stripPhoto}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+            ))}
+          </ScrollView>
+        ) : null}
 
         {item.url && (
           <Pressable
@@ -688,6 +774,29 @@ const ItemRow = memo(function ItemRow({
                 </Text>
               </Pressable>
             )}
+            {reserve.others > 0 ? (
+              <Text style={styles.reserveNote}>
+                🔖 {reserve.others} {reserve.others === 1 ? "person is" : "people are"} considering this
+              </Text>
+            ) : null}
+            {!mine && (!full || reserve.mine) ? (
+              <Pressable
+                onPress={() => onReserve(item)}
+                hitSlop={8}
+                style={styles.purchaseToggleWrap}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  reserve.mine ? "Remove your reservation" : "Reserve this for later"
+                }
+                accessibilityState={{ selected: reserve.mine }}
+              >
+                <Text style={styles.reserveToggle}>
+                  {reserve.mine
+                    ? "🔖 Reserved — thinking about it (tap to undo)"
+                    : "🔖 Reserve for later"}
+                </Text>
+              </Pressable>
+            ) : null}
               </>
             )}
             <Pressable
@@ -766,6 +875,8 @@ const makeStyles = (c: ThemeColors) =>
     thumbEmpty: { alignItems: "center", justifyContent: "center" },
     thumbEmptyText: { fontSize: 28 },
     itemBody: { flex: 1, gap: 6 },
+    photoStrip: { gap: 6 },
+    stripPhoto: { width: 48, height: 48, borderRadius: 6, backgroundColor: c.border },
     itemTitle: { fontSize: 16, fontWeight: "600", color: c.text },
     priorityTag: { fontSize: 12, fontWeight: "800", color: c.accent },
     metaRow: { flexDirection: "row", gap: 12, alignItems: "center" },
@@ -778,6 +889,8 @@ const makeStyles = (c: ThemeColors) =>
     purchaseToggleWrap: { alignItems: "center" },
     purchaseToggle: { fontSize: 13, color: c.accent, fontWeight: "600" },
     revealToggle: { fontSize: 13, color: c.accent, fontWeight: "700" },
+    reserveToggle: { fontSize: 13, color: c.accent, fontWeight: "600" },
+    reserveNote: { fontSize: 12, color: c.textMuted, fontWeight: "600" },
     discussWrap: { alignItems: "center", marginTop: 2 },
     discuss: { fontSize: 13, color: c.textMuted, fontWeight: "600" },
     claimBtn: {

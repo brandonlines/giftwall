@@ -115,7 +115,7 @@ export const wishlistsRepo = {
       Partial<
         Pick<
           Item,
-          "url" | "image_url" | "price_cents" | "currency" | "note" | "quantity" | "is_priority" | "is_group_gift"
+          "url" | "image_url" | "images" | "price_cents" | "currency" | "note" | "quantity" | "is_priority" | "is_group_gift"
         >
       >,
   ): Promise<void> {
@@ -141,6 +141,7 @@ export const wishlistsRepo = {
         | "title"
         | "url"
         | "image_url"
+        | "images"
         | "price_cents"
         | "currency"
         | "note"

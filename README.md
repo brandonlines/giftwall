@@ -179,6 +179,17 @@ does not apply RLS and would defeat the wall. Use `postgres_changes` only.
 
 ## What's built
 
+- **Home dashboard** — the groups screen surfaces the soonest occasions across
+  every group with an "unclaimed" nudge for others' lists (never your own — the
+  Surprise Wall), plus a search entry. `src/data/repositories/dashboard.ts`.
+- **Global search** — gifts + people across all your groups, RLS-scoped.
+  `src/app/search.tsx`, `src/data/repositories/search.ts`.
+- **Reserve for later** — a soft-interest toggle that sits below a hard claim and
+  never blocks one; same Surprise Wall as claims (`reservations` table reuses
+  `can_see_claims_for_item`). `src/data/repositories/reservations.ts`,
+  `src/lib/reserve-state.ts`.
+- **Multiple photos per item** — ordered `images[]` (cover = first, mirrored to
+  `image_url`); manage several in the item form, view extras in a list strip.
 - **Auth** — email OTP, Sign in with Apple (native), Google (OAuth/PKCE).
   `src/app/sign-in.tsx`, `src/lib/auth.ts`, `src/providers/auth.tsx`.
 - **Screens** — groups home, group detail (wishlists + invite-code banner with
