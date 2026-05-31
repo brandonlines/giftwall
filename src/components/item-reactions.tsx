@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { reactionsRepo } from "@/data/repositories/reactions";
+import { subscribeToReactions } from "@/data/realtime";
 import { reactionSummary, type ReactionEmoji } from "@/lib/reactions";
 import { useAuth } from "@/providers/auth";
 import { useThemedStyles } from "@/theme/provider";
@@ -39,6 +40,9 @@ export function ItemReactions({ itemId }: { itemId: string }) {
       active = false;
     };
   }, [itemId]);
+
+  // Live: refetch when anyone reacts on this item.
+  useEffect(() => subscribeToReactions(itemId, reload), [itemId, reload]);
 
   async function toggle(emoji: ReactionEmoji) {
     if (!userId) return;

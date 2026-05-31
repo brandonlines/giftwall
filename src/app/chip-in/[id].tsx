@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
 import { contributionsRepo } from "@/data/repositories/contributions";
+import { subscribeToContributions } from "@/data/realtime";
 import { fundedFraction, myContribution, sumCents } from "@/lib/contributions";
 import { formatPrice } from "@/lib/format";
 import { parsePriceToCents } from "@/lib/validation";
@@ -55,6 +56,9 @@ export default function ChipInScreen() {
       void load();
     }, [load]),
   );
+
+  // Live: refresh as others chip in.
+  useEffect(() => subscribeToContributions(id, load), [id, load]);
 
   async function submit() {
     const cents = parsePriceToCents(amountText);

@@ -63,3 +63,51 @@ export function subscribeToActivity(groupId: string, onChange: () => void) {
     supabase.removeChannel(channel);
   };
 }
+
+// Live reactions for one item (group-visible, recipient included).
+export function subscribeToReactions(itemId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`reactions-${itemId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reactions", filter: `item_id=eq.${itemId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// Live group-gift contributions for one item. RLS-enforced — the recipient
+// never receives events for their own item, so the Surprise Wall holds.
+export function subscribeToContributions(itemId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`contributions-${itemId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "contributions", filter: `item_id=eq.${itemId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+// Live Secret Santa draw for one group. RLS means a member only receives their
+// OWN assignment row — so "you're buying for ___" appears right after the draw
+// without leaking anyone else's match over the wire.
+export function subscribeToSanta(groupId: string, onChange: () => void) {
+  const channel = supabase
+    .channel(`santa-${groupId}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "santa_assignments", filter: `group_id=eq.${groupId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

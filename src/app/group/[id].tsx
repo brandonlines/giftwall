@@ -1,4 +1,4 @@
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -19,6 +19,7 @@ import { formatCountdown, isValidDateStr } from "@/lib/dates";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { santaRepo } from "@/data/repositories/santa";
+import { subscribeToSanta } from "@/data/realtime";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -114,6 +115,12 @@ export default function GroupScreen() {
       void load();
     }, [load]),
   );
+
+  // Live: a Secret Santa draw pushes each member their own assignment.
+  useEffect(() => {
+    if (group?.event_type !== "secret_santa") return;
+    return subscribeToSanta(id, load);
+  }, [id, group?.event_type, load]);
 
   async function createList() {
     if (!title.trim()) return;
