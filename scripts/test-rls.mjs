@@ -111,6 +111,17 @@ async function run() {
   const dave = await makeUser("Dave");
   const mallory = await makeUser("Mallory");
 
+  // --- Hardening: the anonymous role must not be able to invoke the app's
+  // authenticated-only RPCs at all (migration 0021 revokes EXECUTE from PUBLIC
+  // and re-grants only to authenticated/service_role). -----------------------
+  const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+  const anonCreate = await anon.rpc("create_group", { p_name: "anon-should-fail" });
+  check("Anon CANNOT call create_group RPC", !!anonCreate.error, "expected permission denied");
+  const anonDraw = await anon.rpc("draw_secret_santa", {
+    p_group_id: "00000000-0000-0000-0000-000000000000",
+  });
+  check("Anon CANNOT call draw_secret_santa RPC", !!anonDraw.error, "expected permission denied");
+
   // --- Alice builds a group, list, items ----------------------------------
   // Group creation goes through the create_group RPC (atomic group + admin
   // membership); direct membership self-insert is no longer permitted.
