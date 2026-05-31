@@ -4,6 +4,7 @@ import {
   Image,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -21,8 +22,12 @@ import {
   type NotificationSettings,
 } from "@/data/repositories/notifications";
 import { accountRepo } from "@/data/repositories/account";
+import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { isValidDateStr } from "@/lib/dates";
+import { profileShareMessage, profileUrl } from "@/lib/links";
+import { isValidUsername, normalizeUsername } from "@/lib/validation";
 import { signOut } from "@/lib/auth";
+import type { Wishlist } from "@/types/database";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import { themeList, type ThemeColors } from "@/theme/themes";
@@ -35,6 +40,9 @@ export default function ProfileScreen() {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [birthday, setBirthday] = useState("");
+  const [username, setUsername] = useState("");
+  const [savedUsername, setSavedUsername] = useState("");
+  const [myLists, setMyLists] = useState<Wishlist[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,13 +54,16 @@ export default function ProfileScreen() {
   });
 
   useEffect(() => {
-    Promise.all([profileRepo.getMine(), notificationsRepo.getMine()])
-      .then(([p, n]) => {
+    Promise.all([profileRepo.getMine(), notificationsRepo.getMine(), wishlistsRepo.mine()])
+      .then(([p, n, lists]) => {
         setName(p?.display_name ?? "");
         setAddress(p?.shipping_address ?? "");
         setBirthday(p?.birthday ?? "");
+        setUsername(p?.username ?? "");
+        setSavedUsername(p?.username ?? "");
         setAvatar(p?.avatar_url ?? null);
         setPrefs(n);
+        setMyLists(lists);
       })
       .catch((e) => Alert.alert("Couldn't load profile", String((e as Error).message)))
       .finally(() => setLoading(false));
@@ -97,16 +108,41 @@ export default function ProfileScreen() {
       Alert.alert("Check your birthday", "Use a date like 1990-07-23 (year-month-day).");
       return;
     }
+    const handle = normalizeUsername(username);
+    if (username.trim() && !isValidUsername(handle)) {
+      Alert.alert("Check your handle", "Use 3–30 letters, numbers or underscores.");
+      return;
+    }
     setSaving(true);
     try {
       await profileRepo.setDisplayName(name.trim());
       await profileRepo.setShippingAddress(address);
       await profileRepo.setBirthday(trimmedBday || null);
+      await profileRepo.setUsername(handle || null);
+      setSavedUsername(handle);
       router.back();
     } catch (e) {
       Alert.alert("Couldn't save", String((e as Error).message));
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Public-list visibility persists immediately (optimistic), reverting on error.
+  function toggleListPublic(list: Wishlist, value: boolean) {
+    setMyLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, is_public: value } : l)));
+    wishlistsRepo.setPublic(list.id, value).catch((e) => {
+      Alert.alert("Couldn't update", String((e as Error).message));
+      setMyLists((prev) => prev.map((l) => (l.id === list.id ? { ...l, is_public: !value } : l)));
+    });
+  }
+
+  async function shareProfile() {
+    if (!savedUsername) return;
+    try {
+      await Share.share({ message: profileShareMessage(savedUsername) });
+    } catch {
+      // user dismissed the share sheet
     }
   }
 
@@ -211,6 +247,55 @@ export default function ProfileScreen() {
           accessibilityLabel="Birthday, format year-month-day"
         />
         <Button title="Save" onPress={save} loading={saving} />
+
+        <Text style={[styles.label, { marginTop: 32 }]}>Public profile</Text>
+        <Text style={styles.hint}>
+          Claim a handle for one shareable link to every list you mark public.
+          Visitors see your gift ideas — never who already claimed them.
+        </Text>
+        <View style={styles.handleRow}>
+          <Text style={styles.atSign}>@</Text>
+          <TextInput
+            style={styles.handleInput}
+            placeholder="yourname"
+            placeholderTextColor={colors.placeholder}
+            value={username}
+            onChangeText={setUsername}
+            editable={!loading}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Public profile handle"
+          />
+        </View>
+        {savedUsername ? (
+          <View style={styles.shareRow}>
+            <Text style={styles.urlPreview} numberOfLines={1}>
+              {profileUrl(savedUsername)}
+            </Text>
+            <Button title="Share" variant="secondary" onPress={shareProfile} />
+          </View>
+        ) : (
+          <Text style={styles.hintSmall}>Save a handle to get your shareable link.</Text>
+        )}
+        {myLists.length > 0 ? (
+          <Card style={styles.publicLists}>
+            {myLists.map((l, i) => (
+              <View key={l.id} style={[styles.publicRow, i > 0 && styles.prefRowBorder]}>
+                <Text style={styles.publicTitle} numberOfLines={1}>
+                  {l.title}
+                </Text>
+                <Switch
+                  value={l.is_public}
+                  onValueChange={(v) => toggleListPublic(l, v)}
+                  disabled={loading}
+                  accessibilityLabel={`Show ${l.title} on your public profile`}
+                />
+              </View>
+            ))}
+          </Card>
+        ) : (
+          <Text style={styles.hintSmall}>Lists you create will appear here to share publicly.</Text>
+        )}
 
         <Text style={[styles.label, { marginTop: 32 }]}>Theme</Text>
         <Text style={styles.hint}>Pick the look that feels most like the season.</Text>
@@ -336,6 +421,31 @@ const makeStyles = (c: ThemeColors) =>
       color: c.inputText,
     },
     addressInput: { minHeight: 76, textAlignVertical: "top" },
+    hintSmall: { color: c.pageTextMuted, fontSize: 13, marginBottom: 12 },
+    handleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      paddingLeft: 14,
+      marginBottom: 10,
+      backgroundColor: c.inputBg,
+    },
+    atSign: { fontSize: 16, fontWeight: "700", color: c.pageTextMuted },
+    handleInput: { flex: 1, padding: 14, paddingLeft: 4, fontSize: 16, color: c.inputText },
+    shareRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+    urlPreview: { flex: 1, color: c.accent, fontSize: 13, fontWeight: "600" },
+    publicLists: { paddingVertical: 4, paddingHorizontal: 8, marginBottom: 4 },
+    publicRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      gap: 12,
+    },
+    publicTitle: { fontSize: 15, color: c.text, flex: 1 },
     prefList: { paddingVertical: 4, paddingHorizontal: 8 },
     prefRow: {
       flexDirection: "row",

@@ -24,6 +24,28 @@ export const wishlistsRepo = {
     return data ?? [];
   },
 
+  // The current user's own wishlists across every group — for managing which
+  // ones appear on their public profile.
+  async mine(): Promise<Wishlist[]> {
+    const uid = await currentUserId();
+    const { data, error } = await supabase
+      .from("wishlists")
+      .select("*")
+      .eq("owner_id", uid)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  // Owner-only (RLS): show or hide a list on the public profile page.
+  async setPublic(listId: string, isPublic: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("wishlists")
+      .update({ is_public: isPublic })
+      .eq("id", listId);
+    if (error) throw error;
+  },
+
   async create(
     groupId: string,
     title: string,
