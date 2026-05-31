@@ -265,6 +265,42 @@ async function run() {
   const drawnCheck = await bob.client.rpc("santa_is_drawn", { p_group_id: group.id });
   check("santa_is_drawn() is true after the draw", drawnCheck.data === true);
 
+  // Exclusions: admin-managed pairs who must never draw each other.
+  const bobExcl = await bob.client
+    .from("santa_exclusions")
+    .insert({ group_id: group.id, user_a: bob.id, user_b: carol.id });
+  check("Non-admin CANNOT add a Santa exclusion", !!bobExcl.error, "expected RLS error");
+  const aliceExcl = await alice.client
+    .from("santa_exclusions")
+    .insert({ group_id: group.id, user_a: alice.id, user_b: bob.id });
+  check("Admin can add a Santa exclusion", !aliceExcl.error, aliceExcl.error?.message);
+  const bobReadExcl = await bob.client.from("santa_exclusions").select("*").eq("group_id", group.id);
+  check("Non-admin CANNOT read exclusions", (bobReadExcl.data?.length ?? 0) === 0);
+  const aliceReadExcl = await alice.client
+    .from("santa_exclusions")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Admin can read exclusions", (aliceReadExcl.data?.length ?? 0) === 1);
+  // The re-draw must honor the exclusion in BOTH directions.
+  const reDraw = await alice.client.rpc("draw_secret_santa", { p_group_id: group.id });
+  check("Admin can re-draw with an exclusion in place", !reDraw.error, reDraw.error?.message);
+  const aliceA = await alice.client
+    .from("santa_assignments")
+    .select("receiver_id")
+    .eq("group_id", group.id)
+    .eq("giver_id", alice.id)
+    .maybeSingle();
+  const bobA = await bob.client
+    .from("santa_assignments")
+    .select("receiver_id")
+    .eq("group_id", group.id)
+    .eq("giver_id", bob.id)
+    .maybeSingle();
+  check(
+    "Draw honors the exclusion (Alice and Bob never draw each other)",
+    aliceA.data?.receiver_id !== bob.id && bobA.data?.receiver_id !== alice.id,
+  );
+
   console.log("\nPer-item discussion:");
   const bobComment = await bob.client
     .from("item_comments")

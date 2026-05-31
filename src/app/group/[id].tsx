@@ -216,12 +216,20 @@ export default function GroupScreen() {
                     </Text>
                   )}
                   {isAdmin ? (
-                    <Button
-                      title={santaDrawn ? "Re-draw names" : "Draw names"}
-                      variant="secondary"
-                      onPress={drawSecretSanta}
-                      loading={santaBusy}
-                    />
+                    <>
+                      <Button
+                        title={santaDrawn ? "Re-draw names" : "Draw names"}
+                        variant="secondary"
+                        onPress={drawSecretSanta}
+                        loading={santaBusy}
+                      />
+                      <Pressable
+                        onPress={() => router.push(`/santa-exclusions/${id}`)}
+                        hitSlop={6}
+                      >
+                        <Text style={styles.santaLink}>Manage exclusions →</Text>
+                      </Pressable>
+                    </>
                   ) : null}
                 </Card>
               ) : null}
@@ -342,4 +350,5 @@ const makeStyles = (c: ThemeColors) =>
     santaTitle: { fontSize: 16, fontWeight: "800", color: c.text },
     santaText: { fontSize: 15, color: c.text, lineHeight: 21 },
     santaName: { fontWeight: "800", color: c.accent },
+    santaLink: { color: c.accent, fontWeight: "700", textAlign: "center", paddingVertical: 4 },
   });

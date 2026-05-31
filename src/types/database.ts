@@ -131,6 +131,12 @@ export interface Database {
         Update: { receiver_id?: string };
         Relationships: [];
       };
+      santa_exclusions: {
+        Row: { group_id: string; user_a: string; user_b: string; created_at: string };
+        Insert: { group_id: string; user_a: string; user_b: string };
+        Update: { user_a?: string; user_b?: string };
+        Relationships: [];
+      };
       push_tokens: {
         Row: { token: string; user_id: string; platform: string | null; updated_at: string };
         Insert: { token: string; user_id: string; platform?: string | null };
@@ -209,6 +215,7 @@ export type Claim = T["claims"]["Row"];
 export type Contribution = T["contributions"]["Row"];
 export type Reaction = T["reactions"]["Row"];
 export type SantaAssignment = T["santa_assignments"]["Row"];
+export type SantaExclusion = T["santa_exclusions"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
