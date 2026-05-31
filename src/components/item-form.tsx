@@ -30,6 +30,7 @@ export type ItemFormValue = {
   quantity: number;
   is_priority: boolean;
   is_group_gift: boolean;
+  photos: string[];
 };
 
 // Shared form for creating and editing an item. Handles link scraping and
@@ -57,6 +58,7 @@ export function ItemForm({
   const [quantityText, setQuantityText] = useState(String(initial?.quantity ?? 1));
   const [note, setNote] = useState(initial?.note ?? "");
   const [imageUrl, setImageUrl] = useState<string | null>(initial?.image_url ?? null);
+  const [photos, setPhotos] = useState<string[]>(initial?.photos ?? []);
   const [currency, setCurrency] = useState<string | null>(initial?.currency ?? null);
   const [isPriority, setIsPriority] = useState(initial?.is_priority ?? false);
   const [isGroupGift, setIsGroupGift] = useState(initial?.is_group_gift ?? false);
@@ -106,6 +108,30 @@ export function ItemForm({
     }
   }
 
+  async function addMorePhotos() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: 6,
+      quality: 0.7,
+      base64: true,
+    });
+    if (result.canceled) return;
+    const assets = result.assets.filter((a) => a.base64);
+    if (assets.length === 0) return;
+    setUploading(true);
+    try {
+      const urls = await Promise.all(
+        assets.map((a) => wishlistsRepo.uploadItemImage(a.base64!, a.mimeType ?? "image/jpeg")),
+      );
+      setPhotos((p) => [...p, ...urls]);
+    } catch (e) {
+      Alert.alert("Couldn't upload photos", String((e as Error).message));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function fetchMeta() {
     if (!url.trim()) return;
     setScraping(true);
@@ -129,6 +155,7 @@ export function ItemForm({
     setQuantityText("1");
     setNote("");
     setImageUrl(null);
+    setPhotos([]);
     setCurrency(null);
     setIsPriority(false);
     setIsGroupGift(false);
@@ -165,6 +192,7 @@ export function ItemForm({
             quantity: 1,
             is_priority: false,
             is_group_gift: false,
+            photos: [],
           });
         }
         resetForm();
@@ -187,6 +215,7 @@ export function ItemForm({
         quantity: clampQuantity(quantityText),
         is_priority: isPriority,
         is_group_gift: isGroupGift,
+        photos,
       });
     } finally {
       setSaving(false);
@@ -281,6 +310,26 @@ export function ItemForm({
         </View>
       </View>
 
+      <View style={styles.morePhotos}>
+        {photos.map((p, i) => (
+          <View key={p} style={styles.morePhotoWrap}>
+            <Image source={{ uri: p }} style={styles.morePhoto} />
+            <Pressable
+              onPress={() => setPhotos((cur) => cur.filter((_, idx) => idx !== i))}
+              hitSlop={6}
+              style={styles.morePhotoRemove}
+              accessibilityRole="button"
+              accessibilityLabel="Remove photo"
+            >
+              <Text style={styles.morePhotoRemoveText}>✕</Text>
+            </Pressable>
+          </View>
+        ))}
+        <Pressable onPress={addMorePhotos} style={styles.addMore} disabled={uploading}>
+          <Text style={styles.addMoreText}>＋ More photos</Text>
+        </Pressable>
+      </View>
+
       <Pressable
         style={[styles.priorityRow, isPriority && styles.priorityRowOn]}
         onPress={() => setIsPriority((v) => !v)}
@@ -326,6 +375,32 @@ const makeStyles = (c: ThemeColors) =>
     photoEmptyText: { fontSize: 26 },
     photoActions: { flex: 1, gap: 6 },
     removePhoto: { color: c.danger, fontWeight: "600", textAlign: "center" },
+    morePhotos: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 10 },
+    morePhotoWrap: { position: "relative" },
+    morePhoto: { width: 56, height: 56, borderRadius: 8, backgroundColor: c.border },
+    morePhotoRemove: {
+      position: "absolute",
+      top: -6,
+      right: -6,
+      backgroundColor: c.danger,
+      borderRadius: 11,
+      width: 22,
+      height: 22,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    morePhotoRemoveText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+    addMore: {
+      width: 56,
+      height: 56,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderStyle: "dashed",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    addMoreText: { color: c.accent, fontWeight: "700", fontSize: 11, textAlign: "center" },
     priorityRow: {
       borderWidth: 1,
       borderColor: c.inputBorder,

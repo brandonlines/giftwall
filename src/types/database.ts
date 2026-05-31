@@ -84,6 +84,7 @@ export interface Database {
           is_priority: boolean;
           is_group_gift: boolean;
           position: number | null;
+          photos: string[];
           created_at: string;
         };
         Insert: {
@@ -99,6 +100,7 @@ export interface Database {
           is_priority?: boolean;
           is_group_gift?: boolean;
           position?: number | null;
+          photos?: string[];
         };
         Update: {
           title?: string;
@@ -111,6 +113,7 @@ export interface Database {
           is_priority?: boolean;
           is_group_gift?: boolean;
           position?: number | null;
+          photos?: string[];
         };
         Relationships: [];
       };

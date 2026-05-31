@@ -580,6 +580,14 @@ const ItemRow = memo(function ItemRow({
         </View>
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
+        {item.photos && item.photos.length > 0 ? (
+          <View style={styles.galleryRow}>
+            {item.photos.map((p) => (
+              <Image key={p} source={{ uri: p }} style={styles.galleryThumb} />
+            ))}
+          </View>
+        ) : null}
+
         {item.url && (
           <Pressable onPress={() => onOpenUrl(item.url!)} hitSlop={6}>
             <Text style={styles.link}>View product ↗</Text>
@@ -803,6 +811,8 @@ const makeStyles = (c: ThemeColors) =>
     qty: { fontSize: 14, color: c.textMuted, fontWeight: "600" },
     priceBadge: { fontSize: 12, color: c.accent, fontWeight: "700" },
     note: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
+    galleryRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+    galleryThumb: { width: 52, height: 52, borderRadius: 6, backgroundColor: c.border },
     countLabel: { fontSize: 12, color: c.textMuted, fontWeight: "700" },
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
     purchaseToggleWrap: { alignItems: "center" },
