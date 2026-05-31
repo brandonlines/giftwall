@@ -83,6 +83,7 @@ export interface Database {
           quantity: number;
           is_priority: boolean;
           is_group_gift: boolean;
+          position: number | null;
           created_at: string;
         };
         Insert: {
@@ -97,6 +98,7 @@ export interface Database {
           quantity?: number;
           is_priority?: boolean;
           is_group_gift?: boolean;
+          position?: number | null;
         };
         Update: {
           title?: string;
@@ -108,6 +110,7 @@ export interface Database {
           quantity?: number;
           is_priority?: boolean;
           is_group_gift?: boolean;
+          position?: number | null;
         };
         Relationships: [];
       };
