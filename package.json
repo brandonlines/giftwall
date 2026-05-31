@@ -70,8 +70,8 @@
     "test:rls": "node scripts/test-rls.mjs",
     "typecheck": "tsc --noEmit",
     "verify": "npm run lint && npm test",
-    "ship:ota": "npm run verify && npx eas-cli update --branch production --message \"$(git log -1 --pretty=%s)\"",
-    "ship:ota:preview": "npm run verify && npx eas-cli update --branch preview --message \"$(git log -1 --pretty=%s)\""
+    "ship:ota": "npm run verify && npx eas-cli update --branch production --environment production --message \"$(git log -1 --pretty=%s)\"",
+    "ship:ota:preview": "npm run verify && npx eas-cli update --branch preview --environment preview --message \"$(git log -1 --pretty=%s)\""
   },
   "private": true
 }
