@@ -51,6 +51,9 @@ export type ThemeColors = {
 
 export type ThemeKey =
   | "signature"
+  | "birthdayBash"
+  | "sweetBeginnings"
+  | "modernRomance"
   | "winterFrost"
   | "cabinCozy"
   | "firesideCozy"
@@ -98,6 +101,118 @@ export const themes: Record<ThemeKey, Theme> = {
       inputText: "#0A1A2F",
       placeholder: "#9AA8BC",
       headerBg: "#1366D6",
+      headerTint: "#FFFFFF",
+      statusBar: "light",
+      glass: false,
+    },
+  },
+
+  // --- Event palettes (year-round celebrations) ----------------------------
+  birthdayBash: {
+    key: "birthdayBash",
+    name: "Birthday Bash",
+    description: "Tangerine disco & confetti — high-energy celebration.",
+    colors: {
+      background: "#F9F6F0",
+      backgroundGradient: ["#FBF4ED", "#F6ECE0"],
+      surface: "#FFFFFF",
+      text: "#33261E",
+      textMuted: "#897668",
+      pageText: "#33261E",
+      pageTextMuted: "#7C6757",
+      primary: "#E35420",
+      onPrimary: "#FFFFFF",
+      accent: "#D24E1F",
+      accentSoft: "#FFE3D3",
+      onAccentSoft: "#B23E10",
+      claim: "#00E5E5", // electric cyan CLAIM pop
+      onClaim: "#003B40",
+      claimMine: "#E35420",
+      onClaimMine: "#FFFFFF",
+      claimedOther: "#EDE3D8",
+      onClaimedOther: "#6E5C4E",
+      danger: "#DC2647",
+      onDanger: "#FFFFFF",
+      border: "#ECE0D2",
+      inputBg: "#FFFFFF",
+      inputBorder: "#DCCDBC",
+      inputText: "#33261E",
+      placeholder: "#A89684",
+      headerBg: "#FF6B35", // vibrant tangerine header
+      headerTint: "#FFFFFF",
+      statusBar: "light",
+      glass: false,
+    },
+  },
+
+  sweetBeginnings: {
+    key: "sweetBeginnings",
+    name: "Sweet Beginnings",
+    description: "Sunwashed sage & clay — calm baby-shower warmth.",
+    colors: {
+      background: "#F2EDE4",
+      backgroundGradient: ["#F5F1E9", "#EDE6DA"],
+      surface: "#FAF8F5",
+      text: "#3A352C",
+      textMuted: "#8C8273",
+      pageText: "#3A352C",
+      pageTextMuted: "#7E7464",
+      primary: "#6E8A6E",
+      onPrimary: "#FFFFFF",
+      accent: "#B5654A",
+      accentSoft: "#F5E2DA",
+      onAccentSoft: "#A04E32",
+      claim: "#D9555A", // coral blush CLAIM
+      onClaim: "#FFFFFF",
+      claimMine: "#6E8A6E",
+      onClaimMine: "#FFFFFF",
+      claimedOther: "#E8E0D4",
+      onClaimedOther: "#6A5E4E",
+      danger: "#C0492F",
+      onDanger: "#FFFFFF",
+      border: "#E5DECF",
+      inputBg: "#FAF8F5",
+      inputBorder: "#D8CFBD",
+      inputText: "#3A352C",
+      placeholder: "#A89E8C",
+      headerBg: "#6E8A6E",
+      headerTint: "#FFFFFF",
+      statusBar: "light",
+      glass: false,
+    },
+  },
+
+  modernRomance: {
+    key: "modernRomance",
+    name: "Modern Romance",
+    description: "Black cherry & champagne gold — editorial wedding luxe.",
+    colors: {
+      background: "#F8F7F4",
+      backgroundGradient: ["#FAF9F6", "#F2EFEA"],
+      surface: "#FFFFFF",
+      text: "#2A1A22",
+      textMuted: "#7D6E76",
+      pageText: "#2A1A22",
+      pageTextMuted: "#6E5F68",
+      primary: "#3A1320",
+      onPrimary: "#FFFFFF",
+      accent: "#7A2540",
+      accentSoft: "#E9E1EE",
+      onAccentSoft: "#4A3A55",
+      claim: "#D4AF37", // champagne gold "mark as claimed"
+      onClaim: "#3A2A00",
+      claimMine: "#7A2540",
+      onClaimMine: "#FFFFFF",
+      claimedOther: "#CBC0D3", // digital lavender dim state
+      onClaimedOther: "#463B52",
+      danger: "#B3243F",
+      onDanger: "#FFFFFF",
+      border: "#E8E3E0",
+      inputBg: "#FFFFFF",
+      inputBorder: "#D8D2DA",
+      inputText: "#2A1A22",
+      placeholder: "#A89EA6",
+      headerBg: "#3A1320",
       headerTint: "#FFFFFF",
       statusBar: "light",
       glass: false,
