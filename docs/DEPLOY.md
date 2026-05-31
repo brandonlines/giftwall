@@ -11,15 +11,21 @@ then the OTA.**
 ## 1. Backend (Supabase)
 
 ```sh
-# Apply pending migrations (currently up to 0028)
+# Apply pending migrations (currently up to 0037)
 npx supabase db push
 
 # The push functions fail CLOSED without a webhook secret — set it once:
 npx supabase secrets set WEBHOOK_SECRET=<a-long-random-string>
 #   …and add the same value as the x-webhook-secret header on the items webhook.
 
+# The gift-assistant function needs an LLM key — it returns 503 gracefully until
+# set, so this is safe to defer. Affiliate wrapping on the public page is also
+# optional (the app reads EXPO_PUBLIC_AMAZON_TAG; the function reads this):
+npx supabase secrets set ANTHROPIC_API_KEY=<your-anthropic-key>
+npx supabase secrets set AMAZON_ASSOC_TAG=<your-amazon-associates-tag>   # optional
+
 # Deploy the Edge Functions
-npx supabase functions deploy scrape-link send-push delete-account occasion-reminders notify-thanks
+npx supabase functions deploy scrape-link send-push delete-account occasion-reminders notify-thanks public-profile gift-assistant
 
 # Webhooks (Dashboard > Database > Webhooks), each with an x-webhook-secret header
 # set to WEBHOOK_SECRET:

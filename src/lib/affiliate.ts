@@ -46,3 +46,15 @@ export function isAffiliable(rawUrl: string): boolean {
     return false;
   }
 }
+
+/**
+ * An Amazon search URL for a free-text query, affiliate-tagged when configured.
+ * Used to turn an AI gift idea ("noise-cancelling headphones") into a shoppable,
+ * monetized link.
+ */
+export function amazonSearchUrl(query: string, amazonTag: string = DEFAULT_AMAZON_TAG): string {
+  const u = new URL("https://www.amazon.com/s");
+  u.searchParams.set("k", query);
+  if (amazonTag) u.searchParams.set("tag", amazonTag);
+  return u.toString();
+}

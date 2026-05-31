@@ -67,3 +67,8 @@ verify_jwt = false
 # Public "Linktree for gifts" page, opened in a browser. No JWT — it serves only
 # owner-published fields (handle, name, avatar, public-list items), never claims.
 verify_jwt = false
+
+[functions.gift-assistant]
+# Authenticated users only — the caller is identified from their JWT and
+# rate-limited per day. Calls an LLM (ANTHROPIC_API_KEY secret).
+verify_jwt = true

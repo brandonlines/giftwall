@@ -1,4 +1,4 @@
-import { affiliateUrl, isAffiliable } from "../affiliate";
+import { affiliateUrl, isAffiliable, amazonSearchUrl } from "../affiliate";
 
 const TAG = "giftwall-20";
 
@@ -50,5 +50,16 @@ describe("isAffiliable", () => {
     expect(isAffiliable("https://www.amazon.de/dp/X")).toBe(true);
     expect(isAffiliable("https://example.com")).toBe(false);
     expect(isAffiliable("garbage")).toBe(false);
+  });
+});
+
+describe("amazonSearchUrl", () => {
+  it("builds a search URL with the query and tag", () => {
+    expect(amazonSearchUrl("noise cancelling headphones", TAG)).toBe(
+      "https://www.amazon.com/s?k=noise+cancelling+headphones&tag=giftwall-20",
+    );
+  });
+  it("omits the tag when none is configured", () => {
+    expect(amazonSearchUrl("lego set", "")).toBe("https://www.amazon.com/s?k=lego+set");
   });
 });
