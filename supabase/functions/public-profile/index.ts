@@ -19,6 +19,25 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const USERNAME_RE = /^[a-z0-9_]{3,30}$/;
 const BRAND = "giftwall";
 
+// Affiliate wrapping for outbound product links (mirrors src/lib/affiliate.ts).
+// The tag isn't secret; set AMAZON_ASSOC_TAG to enable, leave unset to pass through.
+const AMAZON_TAG = Deno.env.get("AMAZON_ASSOC_TAG")?.trim() ?? "";
+const AMAZON_HOST =
+  /(^|\.)amazon\.(com|ca|com\.mx|com\.br|co\.uk|de|fr|es|it|nl|se|pl|com\.au|co\.jp|in|sg|ae|sa|com\.tr)$/i;
+
+function affiliate(rawUrl: string): string {
+  try {
+    const u = new URL(rawUrl);
+    if ((u.protocol === "http:" || u.protocol === "https:") && AMAZON_TAG && AMAZON_HOST.test(u.hostname)) {
+      u.searchParams.set("tag", AMAZON_TAG);
+      return u.toString();
+    }
+  } catch {
+    // fall through — return original
+  }
+  return rawUrl;
+}
+
 function esc(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -121,7 +140,7 @@ function notFound(): Response {
 
 function renderItem(it: ItemRow): string {
   const price = formatPrice(it.price_cents, it.currency);
-  const safeUrl = it.url && isSafeHttpUrl(it.url) ? it.url : null;
+  const safeUrl = it.url && isSafeHttpUrl(it.url) ? affiliate(it.url) : null;
   const thumb = it.image_url && isSafeHttpUrl(it.image_url)
     ? `<img class="thumb" src="${esc(it.image_url)}" alt="" loading="lazy" />`
     : `<div class="thumb"></div>`;
