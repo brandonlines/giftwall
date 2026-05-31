@@ -25,6 +25,7 @@ import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
 import { deriveReserveState } from "@/lib/reserve-state";
 import { isSafeHttpUrl } from "@/lib/validation";
+import { affiliateUrl } from "@/lib/affiliate";
 import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
@@ -330,7 +331,8 @@ export default function ListScreen() {
 
   const openUrl = useCallback(
     (url: string) => {
-      if (isSafeHttpUrl(url)) void Linking.openURL(url);
+      // Wrap supported retailers with our affiliate tag on the way out.
+      if (isSafeHttpUrl(url)) void Linking.openURL(affiliateUrl(url));
       else showToast("Can't open this link", "error");
     },
     [showToast],
