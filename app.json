@@ -8,7 +8,6 @@
     "scheme": "giftwall",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "usesAppleSignIn": true,
       "bundleIdentifier": "com.giftwall.app",
       "infoPlist": {
