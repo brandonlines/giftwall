@@ -416,6 +416,27 @@ async function run() {
   });
   check("Outsider CANNOT set the group background", !!malloryBg.error, "expected member-check error");
 
+  console.log("\nThank-you notes:");
+  // Alice owns i1's list; Bob claimed i1. Alice (recipient) thanks Bob (giver).
+  const aliceThanks = await alice.client.from("thank_yous").upsert({
+    item_id: i1,
+    from_id: alice.id,
+    to_id: bob.id,
+    message: "Thanks Bob!",
+  });
+  check("Recipient can thank a giver for a gift on her list", !aliceThanks.error, aliceThanks.error?.message);
+  const bobInbox = await bob.client.from("thank_yous").select("*").eq("to_id", bob.id);
+  check("Giver sees a thank-you addressed to them", (bobInbox.data?.length ?? 0) >= 1);
+  const carolPeek = await carol.client.from("thank_yous").select("*").eq("item_id", i1);
+  check("A member NOT party to the thanks can't read it", (carolPeek.data?.length ?? 0) === 0);
+  const bobForge = await bob.client.from("thank_yous").insert({
+    item_id: i1,
+    from_id: bob.id,
+    to_id: carol.id,
+    message: "nope",
+  });
+  check("Non-owner CANNOT send thanks for someone else's gift", !!bobForge.error, "expected RLS error");
+
   // --- admin management ----------------------------------------------------
   console.log("\nAdmin member management:");
   const bobPromote = await bob.client

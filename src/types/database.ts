@@ -220,6 +220,18 @@ export interface Database {
         Update: { list_title?: string | null; item_title?: string | null };
         Relationships: [];
       };
+      thank_yous: {
+        Row: {
+          item_id: string;
+          from_id: string;
+          to_id: string;
+          message: string;
+          created_at: string;
+        };
+        Insert: { item_id: string; from_id: string; to_id: string; message: string };
+        Update: { message?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -263,3 +275,4 @@ export type PushToken = T["push_tokens"]["Row"];
 export type NotificationPrefs = T["notification_preferences"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
+export type ThankYou = T["thank_yous"]["Row"];
