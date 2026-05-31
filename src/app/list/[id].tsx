@@ -219,6 +219,26 @@ export default function ListScreen() {
     [userId, load, showToast],
   );
 
+  // Owner reorders the list with ▲▼: swap with the neighbor, persist positions.
+  const moveItem = useCallback(
+    async (item: Item, dir: -1 | 1) => {
+      const idx = items.findIndex((i) => i.id === item.id);
+      const j = idx + dir;
+      if (idx < 0 || j < 0 || j >= items.length) return;
+      const next = [...items];
+      [next[idx], next[j]] = [next[j], next[idx]];
+      setItems(next);
+      tapFeedback();
+      try {
+        await wishlistsRepo.reorder(next.map((i) => i.id));
+      } catch (e) {
+        showToast(String((e as Error).message) || "Couldn't reorder", "error");
+        await load();
+      }
+    },
+    [items, showToast, load],
+  );
+
   const toggleClaim = useCallback(
     async (item: Item) => {
       if (!userId) return;
@@ -392,7 +412,7 @@ export default function ListScreen() {
             />
           )
         }
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <ItemRow
             item={item}
             claims={claims[item.id]}
@@ -407,6 +427,10 @@ export default function ListScreen() {
             onChipIn={openChipIn}
             onOpenUrl={openUrl}
             onRefreshPrice={refreshPrice}
+            onMove={moveItem}
+            reorder={
+              isOwner && !q ? { up: index > 0, down: index < items.length - 1 } : null
+            }
             priceChanged={priceChanged.has(item.id)}
           />
         )}
@@ -499,6 +523,8 @@ const ItemRow = memo(function ItemRow({
   onChipIn,
   onOpenUrl,
   onRefreshPrice,
+  onMove,
+  reorder,
   priceChanged,
 }: {
   item: Item;
@@ -514,6 +540,8 @@ const ItemRow = memo(function ItemRow({
   onChipIn: (item: Item) => void;
   onOpenUrl: (url: string) => void;
   onRefreshPrice: (item: Item) => void;
+  onMove: (item: Item, dir: -1 | 1) => void;
+  reorder: { up: boolean; down: boolean } | null;
   priceChanged?: boolean;
 }) {
   const styles = useThemedStyles(makeStyles);
@@ -552,6 +580,14 @@ const ItemRow = memo(function ItemRow({
         </View>
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
+        {item.photos && item.photos.length > 0 ? (
+          <View style={styles.galleryRow}>
+            {item.photos.map((p) => (
+              <Image key={p} source={{ uri: p }} style={styles.galleryThumb} />
+            ))}
+          </View>
+        ) : null}
+
         {item.url && (
           <Pressable onPress={() => onOpenUrl(item.url!)} hitSlop={6}>
             <Text style={styles.link}>View product ↗</Text>
@@ -563,6 +599,28 @@ const ItemRow = memo(function ItemRow({
         {/* Owner: manage the item. Surprise Wall hides all claim state from them. */}
         {isOwner ? (
           <View style={styles.ownerActions}>
+            {reorder ? (
+              <View style={styles.reorderBtns}>
+                <Pressable
+                  onPress={() => onMove(item, -1)}
+                  disabled={!reorder.up}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Move ${item.title} up`}
+                >
+                  <Text style={[styles.reorderArrow, !reorder.up && styles.reorderArrowOff]}>▲</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => onMove(item, 1)}
+                  disabled={!reorder.down}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Move ${item.title} down`}
+                >
+                  <Text style={[styles.reorderArrow, !reorder.down && styles.reorderArrowOff]}>▼</Text>
+                </Pressable>
+              </View>
+            ) : null}
             {item.is_group_gift && <Text style={styles.groupGiftTag}>🎁 Group gift</Text>}
             <Pressable
               onPress={() => onEdit(item)}
@@ -753,6 +811,8 @@ const makeStyles = (c: ThemeColors) =>
     qty: { fontSize: 14, color: c.textMuted, fontWeight: "600" },
     priceBadge: { fontSize: 12, color: c.accent, fontWeight: "700" },
     note: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
+    galleryRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+    galleryThumb: { width: 52, height: 52, borderRadius: 6, backgroundColor: c.border },
     countLabel: { fontSize: 12, color: c.textMuted, fontWeight: "700" },
     link: { fontSize: 14, color: c.accent, fontWeight: "600" },
     purchaseToggleWrap: { alignItems: "center" },
@@ -773,7 +833,10 @@ const makeStyles = (c: ThemeColors) =>
     claimedMineText: { color: c.onClaimMine, fontWeight: "600" },
     claimedOther: { backgroundColor: c.claimedOther },
     claimedOtherText: { color: c.onClaimedOther, fontWeight: "600" },
-    ownerActions: { flexDirection: "row", gap: 20, marginTop: 4 },
+    ownerActions: { flexDirection: "row", alignItems: "center", gap: 20, marginTop: 4 },
+    reorderBtns: { flexDirection: "row", gap: 12, marginRight: -4 },
+    reorderArrow: { fontSize: 16, color: c.accent, fontWeight: "800" },
+    reorderArrowOff: { color: c.border },
     editAction: { color: c.accent, fontWeight: "600" },
     deleteAction: { color: c.danger, fontWeight: "600" },
     addBox: { marginTop: 24 },

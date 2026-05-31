@@ -19,7 +19,12 @@ npx supabase secrets set WEBHOOK_SECRET=<a-long-random-string>
 #   …and add the same value as the x-webhook-secret header on the items webhook.
 
 # Deploy the Edge Functions
-npx supabase functions deploy scrape-link send-push delete-account occasion-reminders
+npx supabase functions deploy scrape-link send-push delete-account occasion-reminders notify-thanks
+
+# Webhooks (Dashboard > Database > Webhooks), each with an x-webhook-secret header
+# set to WEBHOOK_SECRET:
+#   • items       INSERT -> send-push      (new gift idea)
+#   • thank_yous  INSERT -> notify-thanks  (someone thanked you)
 
 # Schedule the daily reminder job (pg_cron / Scheduled Functions — see the
 # occasion-reminders function header for a pg_cron example).
