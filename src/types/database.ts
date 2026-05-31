@@ -96,6 +96,25 @@ export interface Database {
         Update: { status?: ClaimStatus };
         Relationships: [];
       };
+      contributions: {
+        Row: {
+          id: string;
+          item_id: string;
+          contributor_id: string;
+          amount_cents: number;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          item_id: string;
+          contributor_id: string;
+          amount_cents: number;
+          note?: string | null;
+        };
+        Update: { amount_cents?: number; note?: string | null };
+        Relationships: [];
+      };
       push_tokens: {
         Row: { token: string; user_id: string; platform: string | null; updated_at: string };
         Insert: { token: string; user_id: string; platform?: string | null };
@@ -169,6 +188,7 @@ export type Membership = T["memberships"]["Row"];
 export type Wishlist = T["wishlists"]["Row"];
 export type Item = T["items"]["Row"];
 export type Claim = T["claims"]["Row"];
+export type Contribution = T["contributions"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
