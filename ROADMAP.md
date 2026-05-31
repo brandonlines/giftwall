@@ -11,7 +11,7 @@ TestFlight. This is an honest list of what's still missing, ranked by impact._
 | **Google + email sign-in broken** | Family who don't use Apple literally can't get in. Google = "localhost" redirect (Supabase Redirect URLs); email = no code (Magic Link/Confirm-signup templates need `{{ .Token }}`). | Small (dashboard) |
 | **Push notifications not fully wired** | The `items`→`send-push` webhook + `WEBHOOK_SECRET`. Deployed but not triggered. | Small (dashboard) |
 | **New features untested on live DB** | Group gifting (0017) + reactions (0018) are built/green but never run against the live DB or a device. Need `db push` + `test:rls` + a real two-account try. | Small–medium |
-| **Real support email** | `support@giftwall.app` is a placeholder in the policy + in-app legal + account screens. | Tiny |
+| **Real support email** ✅ | Done — `support@gift-well.ca` across the policy, in-app legal, and account screens. | — |
 
 ## 2. Top missing features (ranked by demand)
 

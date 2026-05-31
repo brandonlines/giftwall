@@ -34,4 +34,4 @@ scraped links may be inaccurate. To the extent permitted by law, we aren't liabl
 for indirect or incidental damages arising from use of the app.
 
 ## Contact
-Questions about these Terms: support@giftwall.app.
+Questions about these Terms: support@gift-well.ca.

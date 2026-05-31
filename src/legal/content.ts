@@ -6,7 +6,7 @@
 // email and jurisdiction, and have it reviewed before public launch.
 
 export const LAST_UPDATED = "2026-05-29";
-export const SUPPORT_EMAIL = "support@giftwall.app"; // TODO: real address
+export const SUPPORT_EMAIL = "support@gift-well.ca";
 
 export type LegalSection = { title: string; body: string[] };
 

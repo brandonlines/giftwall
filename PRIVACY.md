@@ -37,7 +37,7 @@ notifications you opt into. We do **not** sell your personal information and do
 ## Your rights
 - **Export:** Profile → Your data → Export my data (JSON copy).
 - **Deletion:** Profile → Your data → Delete account (permanent, irreversible).
-- **Questions:** support@giftwall.app.
+- **Questions:** support@gift-well.ca.
 
 ## Children
 giftwall is intended for general/family audiences and is not directed to

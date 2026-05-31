@@ -21,7 +21,7 @@ Cloudflare Pages, Vercel, or any static host — it's just one HTML file.
 
 ---
 
-**Before you go public:** replace `support@giftwall.app` in `privacy.html` (and
-in `src/legal/content.ts` / the in-app Legal screen) with your real support email,
-and have the policy reviewed. A `terms.html` can be added the same way from
-`TERMS.md` if you want a Terms link too.
+**Before you go public:** the support email is set to `support@gift-well.ca`
+(across `privacy.html`, `src/legal/content.ts`, and `PRIVACY.md`/`TERMS.md`) —
+make sure that inbox is monitored, and have the policy reviewed. A `terms.html`
+can be added the same way from `TERMS.md` if you want a Terms link too.
