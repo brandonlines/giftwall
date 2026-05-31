@@ -57,3 +57,8 @@ verify_jwt = true
 # Scheduled daily job (cron / pg_net), not an end-user session. Auth is the
 # shared WEBHOOK_SECRET header, checked inside the function (fails closed).
 verify_jwt = false
+
+[functions.notify-thanks]
+# Invoked by a Database Webhook on thank_yous INSERT. Auth is the shared
+# WEBHOOK_SECRET header (fails closed).
+verify_jwt = false
