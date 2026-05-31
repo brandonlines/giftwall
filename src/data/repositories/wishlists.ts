@@ -58,6 +58,16 @@ export const wishlistsRepo = {
     if (error) throw error;
   },
 
+  // Post-occasion reveal: the list owner (giftee) opts in to seeing who gave
+  // what. They still see only gifts whose giver has also opted in (two-party).
+  async setRevealRequested(listId: string, revealed: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("wishlists")
+      .update({ reveal_requested: revealed })
+      .eq("id", listId);
+    if (error) throw error;
+  },
+
   async getItem(itemId: string): Promise<Item> {
     const { data, error } = await supabase
       .from("items")

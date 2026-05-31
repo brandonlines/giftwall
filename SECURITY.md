@@ -40,6 +40,28 @@ membership.
 `member_joined`, `list_created`, and `item_added` only — never claims or
 purchases — so a recipient can't infer a buyer from the timeline.
 
+### Post-occasion reveal (the one deliberate relaxation)
+
+A recipient may eventually see who gave what — but only through a **two-party,
+mutual opt-in**, never unilaterally (migration `0027`). The default predicate
+`can_see_claims_for_item` is left untouched; reveal is a separate, additive
+clause on the `claims` and `contributions` SELECT policies:
+
+```
+... or (revealed and recipient_opted_in_for_item(item_id))
+```
+
+`revealed` is the **giver's** per-row opt-in (the buyer/contributor sets it on
+their own row, gated by the existing `WITH CHECK buyer_id/contributor_id =
+auth.uid()`). `recipient_opted_in_for_item` is true only when the caller is the
+list owner *and* they set `wishlists.reveal_requested` (the **giftee's** opt-in,
+gated by the existing owner-only wishlist UPDATE policy). Because BOTH must hold,
+neither side can act alone: a nosy recipient who flips `reveal_requested` sees
+nothing until each giver also reveals, and a giver who reveals early is invisible
+until the recipient opts in. No time-gate is needed — a giver simply won't reveal
+before they've given — and it's reversible. The RLS suite asserts all four
+combinations, the outsider case, and that a non-owner can't request a reveal.
+
 ## Coverage checklist (audited 2026-05)
 
 - **RLS enabled on all 12 tables** — `activity, claims, contributions, groups,

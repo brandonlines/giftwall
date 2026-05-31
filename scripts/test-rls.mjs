@@ -245,6 +245,55 @@ async function run() {
     .select();
   check("A member CANNOT edit someone else's pledge", (carolEditsBob.data?.length ?? 0) === 0);
 
+  // --- Post-occasion reveal (TWO-PARTY opt-in) -----------------------------
+  // Both the giver (per claim/contribution) AND the giftee (per list) must opt
+  // in before the recipient sees anything. Bob has a claim AND a contribution on
+  // i1; Carol has an un-revealed claim on i2.
+  console.log("\nPost-occasion reveal:");
+  await bob.client.from("claims").update({ revealed: true }).eq("item_id", i1).eq("buyer_id", bob.id);
+  const revGiverOnly = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check(
+    "Giver revealed but giftee hasn't opted in → recipient sees nothing",
+    (revGiverOnly.data?.length ?? 0) === 0,
+  );
+  await alice.client.from("wishlists").update({ reveal_requested: true }).eq("id", list.id);
+  const revBoth = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check(
+    "BOTH opted in → recipient finally sees the revealed claim",
+    (revBoth.data?.length ?? 0) === 1 && revBoth.data?.[0]?.buyer_id === bob.id,
+  );
+  const revGifteeOnly = await alice.client.from("claims").select("*").eq("item_id", i2);
+  check(
+    "Giftee opted in but that giver didn't reveal → that claim stays hidden",
+    (revGifteeOnly.data?.length ?? 0) === 0,
+  );
+  const revContribHidden = await alice.client.from("contributions").select("*").eq("item_id", i1);
+  check(
+    "Contribution reveal is independent — still hidden until its giver reveals",
+    (revContribHidden.data?.length ?? 0) === 0,
+  );
+  await bob.client
+    .from("contributions")
+    .update({ revealed: true })
+    .eq("item_id", i1)
+    .eq("contributor_id", bob.id);
+  const revContribShown = await alice.client.from("contributions").select("*").eq("item_id", i1);
+  check(
+    "BOTH opted in → recipient sees the revealed contribution",
+    (revContribShown.data?.length ?? 0) === 1,
+  );
+  const revOutsider = await mallory.client.from("claims").select("*").eq("item_id", i1);
+  check("Outsider still sees nothing after a reveal", (revOutsider.data?.length ?? 0) === 0);
+  const malloryFlip = await mallory.client
+    .from("wishlists")
+    .update({ reveal_requested: true })
+    .eq("id", list.id)
+    .select();
+  check("Non-owner CANNOT request reveal on someone's list", (malloryFlip.data?.length ?? 0) === 0);
+  await alice.client.from("wishlists").update({ reveal_requested: false }).eq("id", list.id);
+  const revWithdrawn = await alice.client.from("claims").select("*").eq("item_id", i1);
+  check("Recipient withdrawing opt-in restores the Surprise Wall", (revWithdrawn.data?.length ?? 0) === 0);
+
   // --- Secret Santa (server-side, secret draw) -----------------------------
   console.log("\nSecret Santa:");
   const carolDraw = await carol.client.rpc("draw_secret_santa", { p_group_id: group.id });

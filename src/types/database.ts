@@ -51,6 +51,7 @@ export interface Database {
           title: string;
           event_date: string | null;
           recurs_yearly: boolean;
+          reveal_requested: boolean;
           created_at: string;
         };
         Insert: {
@@ -61,7 +62,12 @@ export interface Database {
           event_date?: string | null;
           recurs_yearly?: boolean;
         };
-        Update: { title?: string; event_date?: string | null; recurs_yearly?: boolean };
+        Update: {
+          title?: string;
+          event_date?: string | null;
+          recurs_yearly?: boolean;
+          reveal_requested?: boolean;
+        };
         Relationships: [];
       };
       items: {
@@ -111,10 +117,11 @@ export interface Database {
           item_id: string;
           buyer_id: string;
           status: ClaimStatus;
+          revealed: boolean;
           created_at: string;
         };
         Insert: { id?: string; item_id: string; buyer_id: string; status?: ClaimStatus };
-        Update: { status?: ClaimStatus };
+        Update: { status?: ClaimStatus; revealed?: boolean };
         Relationships: [];
       };
       contributions: {
@@ -124,6 +131,7 @@ export interface Database {
           contributor_id: string;
           amount_cents: number;
           note: string | null;
+          revealed: boolean;
           created_at: string;
         };
         Insert: {
@@ -133,7 +141,7 @@ export interface Database {
           amount_cents: number;
           note?: string | null;
         };
-        Update: { amount_cents?: number; note?: string | null };
+        Update: { amount_cents?: number; note?: string | null; revealed?: boolean };
         Relationships: [];
       };
       reactions: {

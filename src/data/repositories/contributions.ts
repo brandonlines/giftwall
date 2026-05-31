@@ -51,4 +51,16 @@ export const contributionsRepo = {
       throw err;
     }
   },
+
+  // Post-occasion reveal: the contributor opts in to letting the recipient see
+  // their pledge (the recipient must also opt in — two-party reveal).
+  async setRevealed(itemId: string, revealed: boolean): Promise<void> {
+    const uid = await currentUserId();
+    const { error } = await supabase
+      .from("contributions")
+      .update({ revealed })
+      .eq("item_id", itemId)
+      .eq("contributor_id", uid);
+    if (error) throw error;
+  },
 };

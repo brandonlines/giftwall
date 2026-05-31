@@ -65,4 +65,16 @@ export const claimsRepo = {
       .eq("buyer_id", uid);
     if (error) throw error;
   },
+
+  // Post-occasion reveal: the buyer opts in to letting the recipient see this
+  // gift (one half of the two-party reveal — the recipient must also opt in).
+  async setRevealed(itemId: string, revealed: boolean): Promise<void> {
+    const uid = await currentUserId();
+    const { error } = await supabase
+      .from("claims")
+      .update({ revealed })
+      .eq("item_id", itemId)
+      .eq("buyer_id", uid);
+    if (error) throw error;
+  },
 };
