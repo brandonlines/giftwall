@@ -321,7 +321,14 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
-      {coverUrl ? <Image source={{ uri: coverUrl }} style={styles.listCover} /> : null}
+      {coverUrl ? (
+        <Image
+          source={{ uri: coverUrl }}
+          style={styles.listCover}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+      ) : null}
       {list?.event_date && occasionCountdown(list.event_date, list.recurs_yearly) ? (
         <View style={styles.countdownBanner}>
           <Text style={styles.countdownText}>
@@ -332,7 +339,9 @@ export default function ListScreen() {
       ) : null}
       {isOwner && loaded && items.length > 0 ? (
         <View style={styles.surpriseBanner}>
-          <Text style={styles.surpriseEmoji}>🤫</Text>
+          <Text style={styles.surpriseEmoji} accessibilityElementsHidden importantForAccessibility="no">
+            🤫
+          </Text>
           <Text style={styles.surpriseText}>
             This is your list — who claimed or bought each item stays hidden from you, so your gifts stay a surprise.
           </Text>
@@ -343,6 +352,7 @@ export default function ListScreen() {
           style={styles.revealLink}
           onPress={() => router.push(`/reveal/${id}`)}
           accessibilityRole="button"
+          accessibilityLabel="See who gave what"
         >
           <Text style={styles.revealLinkText}>🎁 See who gave what →</Text>
         </Pressable>
@@ -456,6 +466,7 @@ export default function ListScreen() {
                     onChangeText={setEventDateText}
                     autoCapitalize="none"
                     maxLength={10}
+                    accessibilityLabel="Occasion date, format year-month-day"
                   />
                   <Button title="Save" variant="secondary" onPress={saveEventDate} />
                 </View>
@@ -523,9 +534,18 @@ const ItemRow = memo(function ItemRow({
   return (
     <Card style={styles.item}>
       {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.thumb} />
+        <Image
+          source={{ uri: item.image_url }}
+          style={styles.thumb}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
       ) : (
-        <View style={[styles.thumb, styles.thumbEmpty]}>
+        <View
+          style={[styles.thumb, styles.thumbEmpty]}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        >
           <Text style={styles.thumbEmptyText}>🎁</Text>
         </View>
       )}
@@ -548,7 +568,12 @@ const ItemRow = memo(function ItemRow({
         {item.note ? <Text style={styles.note}>{item.note}</Text> : null}
 
         {item.url && (
-          <Pressable onPress={() => onOpenUrl(item.url!)} hitSlop={6}>
+          <Pressable
+            onPress={() => onOpenUrl(item.url!)}
+            hitSlop={6}
+            accessibilityRole="link"
+            accessibilityLabel={`View ${item.title} product page`}
+          >
             <Text style={styles.link}>View product ↗</Text>
           </Pressable>
         )}

@@ -36,6 +36,9 @@ export function Skeleton({
 
   return (
     <Animated.View
+      // Decorative loading placeholder — keep it off the screen-reader tree.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
       style={[
         { height, width: width ?? "100%", borderRadius: radius, backgroundColor: colors.border, opacity: pulse },
         style,

@@ -98,6 +98,7 @@ export default function SignInScreen() {
                 autoComplete="email"
                 value={email}
                 onChangeText={setEmail}
+                accessibilityLabel="Email address"
               />
               <Button title={t("signin.sendCode")} onPress={sendCode} loading={busy} />
             </>
@@ -111,6 +112,7 @@ export default function SignInScreen() {
                 keyboardType="number-pad"
                 value={code}
                 onChangeText={setCode}
+                accessibilityLabel="Verification code"
               />
               <Button title={t("signin.verify")} onPress={confirmCode} loading={busy} />
               <Button

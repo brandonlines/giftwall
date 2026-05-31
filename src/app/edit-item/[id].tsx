@@ -38,7 +38,7 @@ export default function EditItemScreen() {
             }}
           />
         ) : (
-          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} accessibilityLabel="Loading item" />
         )}
       </ScrollView>
     </Screen>

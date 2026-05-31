@@ -32,12 +32,17 @@ export default function GroupQrScreen() {
       <Stack.Screen options={{ title: "Invite" }} />
       <View style={styles.center}>
         {!group ? (
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Loading invite" />
         ) : (
           <>
-            <Text style={styles.heading}>Scan to join</Text>
+            <Text style={styles.heading} accessibilityRole="header">Scan to join</Text>
             <Text style={styles.sub}>{group.name}</Text>
-            <View style={styles.qrCard}>
+            <View
+              style={styles.qrCard}
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={`QR code to join "${group.name}". Or enter code ${group.invite_code}.`}
+            >
               <QRCode
                 value={url}
                 size={220}
@@ -45,7 +50,7 @@ export default function GroupQrScreen() {
                 backgroundColor="transparent"
               />
             </View>
-            <Text style={styles.code}>{group.invite_code}</Text>
+            <Text style={styles.code} maxFontSizeMultiplier={1.4}>{group.invite_code}</Text>
             <Text style={styles.hint}>
               Family can point their camera at this to join — or use the code.
             </Text>

@@ -206,12 +206,20 @@ export function ItemForm({
           keyboardType="url"
           value={url}
           onChangeText={setUrl}
+          accessibilityLabel="Product link"
         />
-        <Pressable style={styles.fetchBtn} onPress={fetchMeta} disabled={scraping}>
+        <Pressable
+          style={styles.fetchBtn}
+          onPress={fetchMeta}
+          disabled={scraping}
+          accessibilityRole="button"
+          accessibilityLabel="Fetch product details from the link"
+          accessibilityState={{ busy: scraping, disabled: scraping }}
+        >
           {scraping ? (
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
-            <Text style={styles.fetchText}>Fetch</Text>
+            <Text style={styles.fetchText} maxFontSizeMultiplier={1.6}>Fetch</Text>
           )}
         </Pressable>
       </View>
@@ -224,6 +232,7 @@ export function ItemForm({
         value={title}
         onChangeText={setTitle}
         maxLength={LIMITS.title}
+        accessibilityLabel="Item name"
       />
 
       <View style={styles.twoCol}>
@@ -234,6 +243,7 @@ export function ItemForm({
           keyboardType="decimal-pad"
           value={priceText}
           onChangeText={setPriceText}
+          accessibilityLabel="Price"
         />
         <TextInput
           style={[styles.input, { flex: 1 }]}
@@ -242,6 +252,7 @@ export function ItemForm({
           keyboardType="number-pad"
           value={quantityText}
           onChangeText={setQuantityText}
+          accessibilityLabel="Quantity"
         />
       </View>
 
@@ -253,6 +264,7 @@ export function ItemForm({
         onChangeText={setNote}
         maxLength={LIMITS.note}
         multiline
+        accessibilityLabel="Note"
       />
 
       <View style={styles.photoRow}>
@@ -260,7 +272,9 @@ export function ItemForm({
           <Image source={{ uri: imageUrl }} style={styles.photo} />
         ) : (
           <View style={[styles.photo, styles.photoEmpty]}>
-            <Text style={styles.photoEmptyText}>🎁</Text>
+            <Text style={styles.photoEmptyText} accessibilityElementsHidden importantForAccessibility="no">
+              🎁
+            </Text>
           </View>
         )}
         <View style={styles.photoActions}>
@@ -286,6 +300,9 @@ export function ItemForm({
       <Pressable
         style={[styles.priorityRow, isPriority && styles.priorityRowOn]}
         onPress={() => setIsPriority((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="Mark as most wanted"
+        accessibilityState={{ selected: isPriority }}
       >
         <Text style={styles.priorityText}>
           {isPriority ? "★ Most wanted" : "☆ Mark as most wanted"}
@@ -295,6 +312,9 @@ export function ItemForm({
       <Pressable
         style={[styles.priorityRow, isGroupGift && styles.priorityRowOn]}
         onPress={() => setIsGroupGift((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel="Make this a group gift that members pool together"
+        accessibilityState={{ selected: isGroupGift }}
       >
         <Text style={styles.priorityText}>
           {isGroupGift ? "🎁 Group gift — members pool together" : "🎁 Make this a group gift"}

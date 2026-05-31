@@ -166,6 +166,7 @@ export default function GroupsScreen() {
               value={name}
               onChangeText={setName}
               maxLength={60}
+              accessibilityLabel="Group name"
             />
             <View style={styles.eventChips}>
               {EVENT_TYPES.map((e) => (
@@ -175,6 +176,7 @@ export default function GroupsScreen() {
                   style={[styles.eventChip, eventType === e.value && styles.eventChipOn]}
                   accessibilityRole="button"
                   accessibilityLabel={`Event type: ${e.label}`}
+                  accessibilityState={{ selected: eventType === e.value }}
                 >
                   <Text style={[styles.eventChipText, eventType === e.value && styles.eventChipTextOn]}>
                     {e.emoji} {e.label}
@@ -194,6 +196,7 @@ export default function GroupsScreen() {
               autoCapitalize="characters"
               value={joinId}
               onChangeText={setJoinId}
+              accessibilityLabel="Group invite code"
             />
             <Button
               title={t("groups.join")}
@@ -219,7 +222,9 @@ const GroupRow = memo(function GroupRow({
   return (
     <Card style={styles.row} onPress={() => onOpen(group.id)} accessibilityLabel={group.name}>
       <Text style={styles.rowTitle}>{group.name}</Text>
-      <Text style={styles.rowChevron}>›</Text>
+      <Text style={styles.rowChevron} accessibilityElementsHidden importantForAccessibility="no">
+        ›
+      </Text>
     </Card>
   );
 });

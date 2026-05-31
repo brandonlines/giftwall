@@ -52,7 +52,11 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
-        <Text style={[styles.label, { color: fg }]}>{title}</Text>
+        // Cap scaling so very large system text can't clip the fixed-height
+        // button, while still honouring most of the Dynamic Type range.
+        <Text style={[styles.label, { color: fg }]} maxFontSizeMultiplier={1.6} numberOfLines={1}>
+          {title}
+        </Text>
       )}
     </Pressable>
   );

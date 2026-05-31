@@ -58,15 +58,26 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.emoji}>{card.emoji}</Text>
-          <Text style={styles.title}>{card.title}</Text>
+          <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
+            {card.emoji}
+          </Text>
+          <Text style={styles.title} accessibilityRole="header">{card.title}</Text>
           <Text style={styles.text}>{card.body}</Text>
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.dots}>
+          <View
+            style={styles.dots}
+            accessibilityRole="progressbar"
+            accessibilityLabel={`Step ${index + 1} of ${CARDS.length}`}
+          >
             {CARDS.map((_, i) => (
-              <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
+              <View
+                key={i}
+                style={[styles.dot, i === index && styles.dotActive]}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
             ))}
           </View>
           <Button title={last ? "Get started" : "Next"} onPress={next} />

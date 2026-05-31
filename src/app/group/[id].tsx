@@ -196,8 +196,13 @@ export default function GroupScreen() {
         options={{
           title: group?.name ?? "Group",
           headerRight: () => (
-            <Pressable hitSlop={10} onPress={shareInvite}>
-              <Text style={styles.invite}>Invite</Text>
+            <Pressable
+              hitSlop={10}
+              onPress={shareInvite}
+              accessibilityRole="button"
+              accessibilityLabel="Share an invite to this group"
+            >
+              <Text style={styles.invite} maxFontSizeMultiplier={1.4}>Invite</Text>
             </Pressable>
           ),
         }}
@@ -228,13 +233,22 @@ export default function GroupScreen() {
                   </Text>
                 </View>
               </Pressable>
-              <Card style={styles.codeCard} onPress={() => router.push(`/group-qr/${id}`)}>
+              <Card
+                style={styles.codeCard}
+                onPress={() => router.push(`/group-qr/${id}`)}
+                accessibilityLabel={`Invite code ${group.invite_code}. Tap to show QR code.`}
+              >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.codeLabel}>Invite code · tap for QR</Text>
                   <Text style={styles.code}>{group.invite_code}</Text>
                 </View>
                 {isAdmin && (
-                  <Pressable onPress={rotateCode} hitSlop={10}>
+                  <Pressable
+                    onPress={rotateCode}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Rotate the invite code"
+                  >
                     <Text style={styles.rotate}>Rotate</Text>
                   </Pressable>
                 )}
@@ -243,12 +257,16 @@ export default function GroupScreen() {
                 <Pressable
                   style={styles.membersLink}
                   onPress={() => router.push(`/members/${id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel="View members"
                 >
                   <Text style={styles.membersText}>View members</Text>
                 </Pressable>
                 <Pressable
                   style={styles.membersLink}
                   onPress={() => router.push(`/activity/${id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel="View activity"
                 >
                   <Text style={styles.membersText}>Activity</Text>
                 </Pressable>
@@ -256,6 +274,8 @@ export default function GroupScreen() {
                   <Pressable
                     style={styles.membersLink}
                     onPress={() => router.push(`/edit-group/${id}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit group"
                   >
                     <Text style={styles.membersText}>Edit group</Text>
                   </Pressable>
@@ -263,7 +283,7 @@ export default function GroupScreen() {
               </View>
               {group.event_type === "secret_santa" ? (
                 <Card style={styles.santaCard}>
-                  <Text style={styles.santaTitle}>🤫 Secret Santa</Text>
+                  <Text style={styles.santaTitle} accessibilityRole="header">🤫 Secret Santa</Text>
                   {santaReceiver ? (
                     <Text style={styles.santaText}>
                       You&apos;re buying for:{" "}
@@ -293,6 +313,8 @@ export default function GroupScreen() {
                       <Pressable
                         onPress={() => router.push(`/santa-exclusions/${id}`)}
                         hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel="Manage Secret Santa exclusions"
                       >
                         <Text style={styles.santaLink}>Manage exclusions →</Text>
                       </Pressable>
@@ -319,6 +341,7 @@ export default function GroupScreen() {
               value={title}
               onChangeText={setTitle}
               maxLength={80}
+              accessibilityLabel="Wishlist name"
             />
             <TextInput
               style={styles.input}
@@ -328,6 +351,7 @@ export default function GroupScreen() {
               onChangeText={setEventDate}
               autoCapitalize="none"
               maxLength={10}
+              accessibilityLabel="Occasion date, optional, format year-month-day"
             />
             {eventDate.trim() ? (
               <View style={styles.recurRow}>
@@ -362,7 +386,14 @@ const WishlistRow = memo(function WishlistRow({
     ? occasionCountdown(wishlist.event_date, wishlist.recurs_yearly)
     : null;
   return (
-    <Card style={styles.row} onPress={() => onOpen(wishlist.id)} accessibilityLabel={wishlist.title}>
+    <Card
+      style={styles.row}
+      onPress={() => onOpen(wishlist.id)}
+      accessibilityLabel={
+        `${wishlist.title}. ${mine ? "Your list" : "Tap to claim gifts"}` +
+        (countdown ? `. ${countdown}` : "")
+      }
+    >
       <View style={{ flex: 1 }}>
         <Text style={styles.rowTitle}>{wishlist.title}</Text>
         <Text style={styles.rowMeta}>
@@ -370,7 +401,9 @@ const WishlistRow = memo(function WishlistRow({
           {countdown ? ` · 📅 ${countdown}${wishlist.recurs_yearly ? " 🔁" : ""}` : ""}
         </Text>
       </View>
-      <Text style={styles.rowChevron}>›</Text>
+      <Text style={styles.rowChevron} accessibilityElementsHidden importantForAccessibility="no">
+        ›
+      </Text>
     </Card>
   );
 });

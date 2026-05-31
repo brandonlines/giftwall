@@ -133,12 +133,21 @@ export default function ProfileScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
-        <Pressable style={styles.avatarWrap} onPress={changePhoto} disabled={uploading}>
+        <Pressable
+          style={styles.avatarWrap}
+          onPress={changePhoto}
+          disabled={uploading}
+          accessibilityRole="button"
+          accessibilityLabel={avatar ? "Change profile photo" : "Add a profile photo"}
+          accessibilityState={{ busy: uploading, disabled: uploading }}
+        >
           {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} />
+            <Image source={{ uri: avatar }} style={styles.avatar} accessibilityLabel="Your profile photo" />
           ) : (
             <View style={[styles.avatar, styles.avatarEmpty]}>
-              <Text style={styles.avatarEmptyText}>📷</Text>
+              <Text style={styles.avatarEmptyText} accessibilityElementsHidden importantForAccessibility="no">
+                📷
+              </Text>
             </View>
           )}
           <Text style={styles.changePhoto}>
@@ -155,6 +164,7 @@ export default function ProfileScreen() {
           value={name}
           onChangeText={setName}
           editable={!loading}
+          accessibilityLabel="Display name"
         />
 
         <Text style={[styles.label, { marginTop: 20 }]}>Shipping address</Text>
@@ -171,6 +181,7 @@ export default function ProfileScreen() {
           editable={!loading}
           multiline
           numberOfLines={3}
+          accessibilityLabel="Shipping address"
         />
         <Button title="Save" onPress={save} loading={saving} />
 
@@ -184,8 +195,10 @@ export default function ProfileScreen() {
                 key={t.key}
                 onPress={() => setTheme(t.key)}
                 style={[styles.themeRow, selected && styles.themeRowSelected]}
+                accessibilityLabel={`${t.name} theme. ${t.description}`}
+                accessibilityState={{ selected }}
               >
-                <View style={styles.swatches}>
+                <View style={styles.swatches} accessibilityElementsHidden importantForAccessibility="no">
                   {[t.colors.primary, t.colors.accent, t.colors.claim, t.colors.surface].map(
                     (col, i) => (
                       <View
@@ -199,7 +212,11 @@ export default function ProfileScreen() {
                   <Text style={styles.themeName}>{t.name}</Text>
                   <Text style={styles.themeDesc}>{t.description}</Text>
                 </View>
-                {selected && <Text style={styles.check}>✓</Text>}
+                {selected && (
+                  <Text style={styles.check} accessibilityElementsHidden importantForAccessibility="no">
+                    ✓
+                  </Text>
+                )}
               </Card>
             );
           })}
@@ -246,11 +263,23 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.legalRow}>
-          <Pressable onPress={() => router.push("/legal/privacy")} hitSlop={8}>
+          <Pressable
+            onPress={() => router.push("/legal/privacy")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open Privacy Policy"
+          >
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </Pressable>
-          <Text style={styles.legalDot}>·</Text>
-          <Pressable onPress={() => router.push("/legal/terms")} hitSlop={8}>
+          <Text style={styles.legalDot} accessibilityElementsHidden importantForAccessibility="no">
+            ·
+          </Text>
+          <Pressable
+            onPress={() => router.push("/legal/terms")}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open Terms of Service"
+          >
             <Text style={styles.legalLink}>Terms of Service</Text>
           </Pressable>
         </View>

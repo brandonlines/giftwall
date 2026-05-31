@@ -97,8 +97,13 @@ export default function ShoppingScreen() {
         options={{
           title: "Shopping",
           headerRight: () => (
-            <Pressable hitSlop={10} onPress={() => router.push("/thanks")}>
-              <Text style={styles.headerLink}>🙏 Thanks</Text>
+            <Pressable
+              hitSlop={10}
+              onPress={() => router.push("/thanks")}
+              accessibilityRole="button"
+              accessibilityLabel="Thank-you notes"
+            >
+              <Text style={styles.headerLink} maxFontSizeMultiplier={1.4}>🙏 Thanks</Text>
             </Pressable>
           ),
         }}
@@ -162,9 +167,12 @@ function SegBtn({ label, on, onPress }: { label: string; on: boolean; onPress: (
       onPress={onPress}
       style={[styles.segBtn, on && styles.segBtnOn]}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected: on }}
     >
-      <Text style={[styles.segBtnText, on && styles.segBtnTextOn]}>{label}</Text>
+      <Text style={[styles.segBtnText, on && styles.segBtnTextOn]} maxFontSizeMultiplier={1.4}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -184,7 +192,11 @@ function ShoppingRow({
       onPress={() => onToggle(entry)}
       accessibilityLabel={`${entry.title}, ${purchased ? "bought" : "not bought"}`}
     >
-      <View style={[styles.checkbox, purchased && styles.checkboxOn]}>
+      <View
+        style={[styles.checkbox, purchased && styles.checkboxOn]}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      >
         {purchased && <Text style={styles.check}>✓</Text>}
       </View>
       <View style={{ flex: 1 }}>

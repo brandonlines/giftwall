@@ -64,7 +64,12 @@ export function ItemReactions({ itemId }: { itemId: string }) {
           style={[styles.chip, t.mine && styles.chipMine]}
           hitSlop={4}
           accessibilityRole="button"
-          accessibilityLabel={`React ${t.emoji}${t.mine ? " (added)" : ""}`}
+          accessibilityState={{ selected: t.mine }}
+          accessibilityLabel={
+            `React ${t.emoji}` +
+            (t.count > 0 ? `, ${t.count} ${t.count === 1 ? "reaction" : "reactions"}` : "") +
+            (t.mine ? ", added by you" : "")
+          }
         >
           <Text style={styles.emoji}>{t.emoji}</Text>
           {t.count > 0 ? <Text style={styles.count}>{t.count}</Text> : null}
