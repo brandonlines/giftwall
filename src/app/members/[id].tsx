@@ -108,10 +108,17 @@ export default function MembersScreen() {
                   </Text>
                 </View>
               )}
-              <Text style={styles.name}>
-                {item.displayName ?? "Unnamed"}
-                {isMe ? " (You)" : ""}
-              </Text>
+              <View style={styles.nameCol}>
+                <Text style={styles.name}>
+                  {item.displayName ?? "Unnamed"}
+                  {isMe ? " (You)" : ""}
+                </Text>
+                {item.shippingAddress ? (
+                  <Text style={styles.address} numberOfLines={2}>
+                    📦 {item.shippingAddress}
+                  </Text>
+                ) : null}
+              </View>
               {item.role === "admin" && <Text style={styles.adminTag}>Admin</Text>}
               {canManage && <Text style={styles.manage}>›</Text>}
             </Card>
@@ -139,7 +146,9 @@ const makeStyles = (c: ThemeColors) =>
     avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.border },
     avatarEmpty: { alignItems: "center", justifyContent: "center" },
     avatarInitial: { fontSize: 18, fontWeight: "700", color: c.textMuted },
-    name: { flex: 1, fontSize: 16, fontWeight: "600", color: c.text },
+    nameCol: { flex: 1 },
+    name: { fontSize: 16, fontWeight: "600", color: c.text },
+    address: { fontSize: 13, color: c.textMuted, marginTop: 2 },
     adminTag: {
       fontSize: 12,
       fontWeight: "700",

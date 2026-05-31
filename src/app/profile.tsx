@@ -27,6 +27,7 @@ export default function ProfileScreen() {
   const { colors, theme, setTheme } = useTheme();
   const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,6 +38,7 @@ export default function ProfileScreen() {
       .getMine()
       .then((p) => {
         setName(p?.display_name ?? "");
+        setAddress(p?.shipping_address ?? "");
         setAvatar(p?.avatar_url ?? null);
       })
       .catch((e) => Alert.alert("Couldn't load profile", String((e as Error).message)))
@@ -71,6 +73,7 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await profileRepo.setDisplayName(name.trim());
+      await profileRepo.setShippingAddress(address);
       router.back();
     } catch (e) {
       Alert.alert("Couldn't save", String((e as Error).message));
@@ -133,6 +136,22 @@ export default function ProfileScreen() {
           value={name}
           onChangeText={setName}
           editable={!loading}
+        />
+
+        <Text style={[styles.label, { marginTop: 20 }]}>Shipping address</Text>
+        <Text style={styles.hint}>
+          Optional. Shown to people in your groups so they can send gifts — leave
+          blank to keep it private.
+        </Text>
+        <TextInput
+          style={[styles.input, styles.addressInput]}
+          placeholder="Street, city, postal/zip code"
+          placeholderTextColor={colors.placeholder}
+          value={address}
+          onChangeText={setAddress}
+          editable={!loading}
+          multiline
+          numberOfLines={3}
         />
         <Button title="Save" onPress={save} loading={saving} />
 
@@ -219,6 +238,7 @@ const makeStyles = (c: ThemeColors) =>
       backgroundColor: c.inputBg,
       color: c.inputText,
     },
+    addressInput: { minHeight: 76, textAlignVertical: "top" },
     themeList: { gap: 10 },
     themeRow: {
       flexDirection: "row",

@@ -6,6 +6,7 @@ export type MemberWithProfile = {
   role: MemberRole;
   displayName: string | null;
   avatarUrl: string | null;
+  shippingAddress: string | null;
 };
 
 // Repositories are the only place app code talks to Supabase. The UI depends on
@@ -74,7 +75,7 @@ export const groupsRepo = {
 
     const { data: profiles, error: pErr } = await supabase
       .from("profiles")
-      .select("id, display_name, avatar_url")
+      .select("id, display_name, avatar_url, shipping_address")
       .in("id", ids);
     if (pErr) throw pErr;
 
@@ -86,6 +87,7 @@ export const groupsRepo = {
         role: m.role,
         displayName: p?.display_name ?? null,
         avatarUrl: p?.avatar_url ?? null,
+        shippingAddress: p?.shipping_address ?? null,
       };
     });
   },

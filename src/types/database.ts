@@ -11,9 +11,24 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; display_name: string | null; avatar_url: string | null; created_at: string };
-        Insert: { id: string; display_name?: string | null; avatar_url?: string | null };
-        Update: { display_name?: string | null; avatar_url?: string | null };
+        Row: {
+          id: string;
+          display_name: string | null;
+          avatar_url: string | null;
+          shipping_address: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          avatar_url?: string | null;
+          shipping_address?: string | null;
+        };
+        Update: {
+          display_name?: string | null;
+          avatar_url?: string | null;
+          shipping_address?: string | null;
+        };
         Relationships: [];
       };
       groups: {
