@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { Button } from "@/components/ui/button";
 import { Screen } from "@/components/ui/screen";
+import { GiftLogo } from "@/components/gift-logo";
 import {
   isAppleSignInAvailable,
   signInWithApple,
@@ -81,6 +82,7 @@ export default function SignInScreen() {
           style={styles.container}
         >
           <View style={styles.header}>
+            <GiftLogo size={84} />
             <Text style={styles.title}>giftwall</Text>
             <Text style={styles.subtitle}>{t("signin.subtitle")}</Text>
           </View>
@@ -149,9 +151,9 @@ const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     safe: { flex: 1, backgroundColor: "transparent" },
     container: { flex: 1, padding: 24, justifyContent: "center", gap: 12 },
-    header: { marginBottom: 24, alignItems: "center" },
+    header: { marginBottom: 24, alignItems: "center", gap: 12 },
     title: { fontSize: 36, fontWeight: "800", color: c.pageText },
-    subtitle: { fontSize: 16, color: c.pageTextMuted, marginTop: 8, textAlign: "center" },
+    subtitle: { fontSize: 16, color: c.pageTextMuted, textAlign: "center" },
     hint: { color: c.pageText, marginBottom: 4 },
     input: {
       borderWidth: 1,

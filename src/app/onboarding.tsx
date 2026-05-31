@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Screen } from "@/components/ui/screen";
+import { GiftLogo } from "@/components/gift-logo";
 import { onboardingSeen } from "@/lib/onboarding";
 import { useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
@@ -47,6 +48,10 @@ export default function OnboardingScreen() {
     <Screen>
       <SafeAreaView style={styles.safe}>
         <View style={styles.top}>
+          <View style={styles.brand}>
+            <GiftLogo size={30} />
+            <Text style={styles.wordmark}>giftwall</Text>
+          </View>
           <Pressable onPress={finish} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip intro">
             <Text style={styles.skip}>Skip</Text>
           </Pressable>
@@ -74,7 +79,9 @@ export default function OnboardingScreen() {
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     safe: { flex: 1, padding: 24 },
-    top: { alignItems: "flex-end", minHeight: 24 },
+    top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 32 },
+    brand: { flexDirection: "row", alignItems: "center", gap: 8 },
+    wordmark: { fontSize: 18, fontWeight: "800", color: c.pageText },
     skip: { color: c.pageTextMuted, fontSize: 16, fontWeight: "600" },
     body: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
     emoji: { fontSize: 72 },
