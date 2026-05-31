@@ -1,5 +1,5 @@
 import { supabase, currentUserId } from "../../lib/supabase";
-import type { Group, MemberRole, Membership } from "../../types/database";
+import type { EventType, Group, MemberRole, Membership } from "../../types/database";
 
 export type MemberWithProfile = {
   user_id: string;
@@ -32,13 +32,23 @@ export const groupsRepo = {
     return data ?? [];
   },
 
-  async create(name: string): Promise<Group> {
+  async create(name: string, eventType: EventType = "general"): Promise<Group> {
     // Atomic: the create_group RPC inserts the group + the creator's admin
     // membership together (SECURITY DEFINER), so there's no half-created group
     // and no need for an open self-join policy.
     const { data, error } = await supabase.rpc("create_group", { p_name: name });
     if (error) throw error;
-    return data as Group;
+    const group = data as Group;
+    if (eventType === "general") return group;
+    // The creator is an admin, so RLS lets them set the event type.
+    const { data: updated, error: uErr } = await supabase
+      .from("groups")
+      .update({ event_type: eventType })
+      .eq("id", group.id)
+      .select()
+      .single();
+    if (uErr) throw uErr;
+    return updated;
   },
 
   async members(groupId: string): Promise<Membership[]> {

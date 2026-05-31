@@ -5,6 +5,7 @@
 export type ClaimStatus = "claimed" | "purchased";
 export type MemberRole = "admin" | "member";
 export type ActivityType = "member_joined" | "list_created" | "item_added";
+export type EventType = "general" | "christmas" | "secret_santa" | "birthday" | "gift_shower";
 
 export interface Database {
   public: {
@@ -16,9 +17,9 @@ export interface Database {
         Relationships: [];
       };
       groups: {
-        Row: { id: string; name: string; created_by: string | null; invite_code: string; created_at: string };
-        Insert: { id?: string; name: string; created_by: string };
-        Update: { name?: string };
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; created_at: string };
+        Insert: { id?: string; name: string; created_by: string; event_type?: EventType };
+        Update: { name?: string; event_type?: EventType };
         Relationships: [];
       };
       memberships: {
@@ -121,6 +122,12 @@ export interface Database {
         Update: { emoji?: string };
         Relationships: [];
       };
+      santa_assignments: {
+        Row: { group_id: string; giver_id: string; receiver_id: string; created_at: string };
+        Insert: { group_id: string; giver_id: string; receiver_id: string };
+        Update: { receiver_id?: string };
+        Relationships: [];
+      };
       push_tokens: {
         Row: { token: string; user_id: string; platform: string | null; updated_at: string };
         Insert: { token: string; user_id: string; platform?: string | null };
@@ -177,6 +184,8 @@ export interface Database {
       };
       redeem_invite: { Args: { p_code: string }; Returns: string };
       rotate_invite_code: { Args: { p_group_id: string }; Returns: string };
+      draw_secret_santa: { Args: { p_group_id: string }; Returns: undefined };
+      santa_is_drawn: { Args: { p_group_id: string }; Returns: boolean };
     };
     Enums: {
       claim_status: ClaimStatus;
@@ -196,6 +205,7 @@ export type Item = T["items"]["Row"];
 export type Claim = T["claims"]["Row"];
 export type Contribution = T["contributions"]["Row"];
 export type Reaction = T["reactions"]["Row"];
+export type SantaAssignment = T["santa_assignments"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
