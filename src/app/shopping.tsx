@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { SectionList, StyleSheet, Text, View } from "react-native";
+import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import { Stack, useFocusEffect } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
@@ -19,6 +19,8 @@ export default function ShoppingScreen() {
   const showToast = useToast();
   const [entries, setEntries] = useState<ShoppingEntry[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [filter, setFilter] = useState<"tobuy" | "purchased">("tobuy");
+  const [sort, setSort] = useState<"group" | "name">("group");
 
   const load = useCallback(async () => {
     try {
@@ -36,9 +38,26 @@ export default function ShoppingScreen() {
     }, [load]),
   );
 
+  const visible = useMemo(
+    () =>
+      entries.filter((e) =>
+        filter === "purchased" ? e.status === "purchased" : e.status !== "purchased",
+      ),
+    [entries, filter],
+  );
+
   const sections = useMemo<Section[]>(() => {
+    if (sort === "name") {
+      return [
+        {
+          title: "",
+          subtitle: "",
+          data: [...visible].sort((a, b) => a.title.localeCompare(b.title)),
+        },
+      ];
+    }
     const byList = new Map<string, Section>();
-    for (const e of entries) {
+    for (const e of visible) {
       const key = `${e.listTitle}__${e.groupName}`;
       if (!byList.has(key)) {
         byList.set(key, { title: e.listTitle, subtitle: e.groupName, data: [] });
@@ -46,9 +65,10 @@ export default function ShoppingScreen() {
       byList.get(key)!.data.push(e);
     }
     return [...byList.values()];
-  }, [entries]);
+  }, [visible, sort]);
 
   const remaining = entries.filter((e) => e.status !== "purchased").length;
+  const purchasedCount = entries.length - remaining;
 
   const togglePurchased = useCallback(
     async (entry: ShoppingEntry) => {
@@ -79,9 +99,16 @@ export default function ShoppingScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           entries.length > 0 ? (
-            <Text style={styles.summary}>
-              {remaining === 0 ? "All bought 🎉" : `${remaining} left to buy`}
-            </Text>
+            <View style={styles.controls}>
+              <View style={styles.segment}>
+                <SegBtn label={`🛒 To buy (${remaining})`} on={filter === "tobuy"} onPress={() => setFilter("tobuy")} />
+                <SegBtn label={`✅ Purchased (${purchasedCount})`} on={filter === "purchased"} onPress={() => setFilter("purchased")} />
+              </View>
+              <View style={styles.segment}>
+                <SegBtn label="By group" on={sort === "group"} onPress={() => setSort("group")} />
+                <SegBtn label="By name" on={sort === "name"} onPress={() => setSort("name")} />
+              </View>
+            </View>
           ) : null
         }
         ListEmptyComponent={
@@ -93,22 +120,42 @@ export default function ShoppingScreen() {
             </View>
           ) : (
             <EmptyState
-              emoji="🛍️"
-              title="Nothing to buy yet"
-              hint="Gifts you claim across your groups show up here."
+              emoji={filter === "purchased" ? "✅" : "🛍️"}
+              title={filter === "purchased" ? "Nothing bought yet" : "Nothing to buy yet"}
+              hint={
+                filter === "purchased"
+                  ? "Gifts you mark as bought show up here."
+                  : "Gifts you claim across your groups show up here."
+              }
             />
           )
         }
-        renderSectionHeader={({ section }) => (
-          <Text style={styles.sectionHeader}>
-            {section.title} · {section.subtitle}
-          </Text>
-        )}
+        renderSectionHeader={({ section }) =>
+          section.title ? (
+            <Text style={styles.sectionHeader}>
+              {section.title} · {section.subtitle}
+            </Text>
+          ) : null
+        }
         renderItem={({ item }) => (
           <ShoppingRow entry={item} onToggle={togglePurchased} />
         )}
       />
     </Screen>
+  );
+}
+
+function SegBtn({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const styles = useThemedStyles(makeStyles);
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[styles.segBtn, on && styles.segBtnOn]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+    >
+      <Text style={[styles.segBtnText, on && styles.segBtnTextOn]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -145,6 +192,20 @@ function ShoppingRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
+    controls: { gap: 8, marginBottom: 12 },
+    segment: { flexDirection: "row", gap: 8 },
+    segBtn: {
+      flex: 1,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      backgroundColor: c.inputBg,
+      alignItems: "center",
+    },
+    segBtnOn: { borderColor: c.accent, backgroundColor: c.accentSoft },
+    segBtnText: { fontSize: 13, fontWeight: "700", color: c.pageTextMuted },
+    segBtnTextOn: { color: c.onAccentSoft },
     summary: { fontSize: 15, fontWeight: "700", color: c.pageText, marginBottom: 8 },
     sectionHeader: {
       fontSize: 13,

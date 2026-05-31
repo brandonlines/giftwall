@@ -157,6 +157,63 @@ function parsePriceCents(raw: string | null): number | null {
   return Math.round(parseFloat(m[1]) * 100);
 }
 
+// schema.org Product/Offer JSON-LD is how MOST retailers expose price (OG price
+// meta tags are rare). Walk every ld+json block, flatten @graph/arrays, and pull
+// the first offers.price (+ priceCurrency).
+function fromJsonLd(html: string): { price: number | null; currency: string | null } {
+  const blocks = html.matchAll(
+    /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+  for (const b of blocks) {
+    let data: unknown;
+    try {
+      data = JSON.parse(b[1].trim());
+    } catch {
+      continue;
+    }
+    const nodes: Record<string, unknown>[] = [];
+    const collect = (d: unknown) => {
+      if (Array.isArray(d)) d.forEach(collect);
+      else if (d && typeof d === "object") {
+        const o = d as Record<string, unknown>;
+        nodes.push(o);
+        if (o["@graph"]) collect(o["@graph"]);
+      }
+    };
+    collect(data);
+    for (const node of nodes) {
+      const offers = (node as Record<string, unknown>).offers;
+      const list = Array.isArray(offers) ? offers : offers ? [offers] : [];
+      for (const offer of list) {
+        const o = (offer ?? {}) as Record<string, any>;
+        const spec = (o.priceSpecification ?? {}) as Record<string, any>;
+        const price = o.price ?? spec.price ?? o.lowPrice;
+        const cur = o.priceCurrency ?? spec.priceCurrency;
+        if (price != null && price !== "") {
+          return { price: parsePriceCents(String(price)), currency: typeof cur === "string" ? cur : null };
+        }
+      }
+      const np = (node as Record<string, any>).price;
+      if (np != null && np !== "") {
+        const nc = (node as Record<string, any>).priceCurrency;
+        return { price: parsePriceCents(String(np)), currency: typeof nc === "string" ? nc : null };
+      }
+    }
+  }
+  return { price: null, currency: null };
+}
+
+// Microdata fallback: <... itemprop="price" content="...">.
+function microdataPrice(html: string): { price: number | null; currency: string | null } {
+  const price =
+    html.match(/itemprop=["']price["'][^>]*content=["']([^"']+)["']/i)?.[1] ??
+    html.match(/content=["']([^"']+)["'][^>]*itemprop=["']price["']/i)?.[1] ??
+    null;
+  const currency =
+    html.match(/itemprop=["']priceCurrency["'][^>]*content=["']([^"']+)["']/i)?.[1] ?? null;
+  return { price: parsePriceCents(price), currency };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -196,13 +253,16 @@ Deno.serve(async (req) => {
       html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.trim() ??
       null;
     const image = metaContent(html, "og:image");
-    const currency =
-      metaContent(html, "og:price:currency") ??
-      metaContent(html, "product:price:currency");
-    const price_cents = parsePriceCents(
-      metaContent(html, "og:price:amount") ??
-        metaContent(html, "product:price:amount"),
+    // Price/currency: OpenGraph first, then JSON-LD (most retailers), then microdata.
+    const ogPrice = parsePriceCents(
+      metaContent(html, "og:price:amount") ?? metaContent(html, "product:price:amount"),
     );
+    const ogCurrency =
+      metaContent(html, "og:price:currency") ?? metaContent(html, "product:price:currency");
+    const ld = fromJsonLd(html);
+    const micro = microdataPrice(html);
+    const price_cents = ogPrice ?? ld.price ?? micro.price;
+    const currency = ogCurrency ?? ld.currency ?? micro.currency;
 
     return json({ title, image, price_cents, currency });
   } catch (e) {
