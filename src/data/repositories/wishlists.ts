@@ -28,21 +28,32 @@ export const wishlistsRepo = {
     groupId: string,
     title: string,
     eventDate?: string | null,
+    recursYearly = false,
   ): Promise<Wishlist> {
     const uid = await currentUserId();
     const { data, error } = await supabase
       .from("wishlists")
-      .insert({ group_id: groupId, owner_id: uid, title, event_date: eventDate ?? null })
+      .insert({
+        group_id: groupId,
+        owner_id: uid,
+        title,
+        event_date: eventDate ?? null,
+        recurs_yearly: recursYearly,
+      })
       .select()
       .single();
     if (error) throw error;
     return data;
   },
 
-  async setEventDate(listId: string, eventDate: string | null): Promise<void> {
+  async setOccasion(
+    listId: string,
+    eventDate: string | null,
+    recursYearly: boolean,
+  ): Promise<void> {
     const { error } = await supabase
       .from("wishlists")
-      .update({ event_date: eventDate })
+      .update({ event_date: eventDate, recurs_yearly: recursYearly })
       .eq("id", listId);
     if (error) throw error;
   },

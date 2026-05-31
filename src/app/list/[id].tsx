@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -24,7 +25,7 @@ import { ItemReactions } from "@/components/item-reactions";
 import { formatPrice } from "@/lib/format";
 import { deriveClaimState } from "@/lib/claim-state";
 import { isSafeHttpUrl } from "@/lib/validation";
-import { formatCountdown, isValidDateStr } from "@/lib/dates";
+import { occasionCountdown, isValidDateStr } from "@/lib/dates";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { claimsRepo } from "@/data/repositories/claims";
 import { scrapeRepo } from "@/data/repositories/scrape";
@@ -67,6 +68,7 @@ export default function ListScreen() {
   const [query, setQuery] = useState("");
   const [seedTitle, setSeedTitle] = useState<string | undefined>();
   const [eventDateText, setEventDateText] = useState("");
+  const [recursYearly, setRecursYearly] = useState(false);
   const [priceChanged, setPriceChanged] = useState<Set<string>>(() => new Set());
 
   // Keep a ref to claims so the toggle handlers can stay stable (useCallback
@@ -102,6 +104,7 @@ export default function ListScreen() {
       ]);
       setList(w);
       setEventDateText(w.event_date ?? "");
+      setRecursYearly(w.recurs_yearly);
       setItems(its);
       await refreshClaims(its);
     } catch (e) {
@@ -266,9 +269,9 @@ export default function ListScreen() {
       return;
     }
     try {
-      await wishlistsRepo.setEventDate(id, v || null);
+      await wishlistsRepo.setOccasion(id, v || null, v ? recursYearly : false);
       await load();
-      showToast("Occasion date saved", "success");
+      showToast("Occasion saved", "success");
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't save date", "error");
     }
@@ -293,9 +296,12 @@ export default function ListScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: list?.title ?? "Wishlist" }} />
-      {list?.event_date && formatCountdown(list.event_date) ? (
+      {list?.event_date && occasionCountdown(list.event_date, list.recurs_yearly) ? (
         <View style={styles.countdownBanner}>
-          <Text style={styles.countdownText}>📅 {formatCountdown(list.event_date)}</Text>
+          <Text style={styles.countdownText}>
+            📅 {occasionCountdown(list.event_date, list.recurs_yearly)}
+            {list.recurs_yearly ? " 🔁" : ""}
+          </Text>
         </View>
       ) : null}
       {isOwner && loaded && items.length > 0 ? (
@@ -416,6 +422,14 @@ export default function ListScreen() {
                     maxLength={10}
                   />
                   <Button title="Save" variant="secondary" onPress={saveEventDate} />
+                </View>
+                <View style={styles.recurRow}>
+                  <Switch
+                    value={recursYearly}
+                    onValueChange={setRecursYearly}
+                    accessibilityLabel="Repeats every year"
+                  />
+                  <Text style={styles.recurLabel}>🔁 Repeats every year (birthday)</Text>
                 </View>
               </View>
 
@@ -643,6 +657,8 @@ const makeStyles = (c: ThemeColors) =>
     surpriseText: { flex: 1, color: c.textMuted, fontSize: 13, lineHeight: 18 },
     occasionWrap: { marginTop: 24 },
     occasionRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+    recurRow: { flexDirection: "row", gap: 10, alignItems: "center", marginTop: 12 },
+    recurLabel: { fontSize: 14, color: c.text, flex: 1 },
     searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
     search: {
       borderWidth: 1,

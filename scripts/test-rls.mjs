@@ -111,6 +111,17 @@ async function run() {
   const dave = await makeUser("Dave");
   const mallory = await makeUser("Mallory");
 
+  // --- Hardening: the anonymous role must not be able to invoke the app's
+  // authenticated-only RPCs at all (migration 0021 revokes EXECUTE from PUBLIC
+  // and re-grants only to authenticated/service_role). -----------------------
+  const anon = createClient(URL, ANON, { auth: { persistSession: false } });
+  const anonCreate = await anon.rpc("create_group", { p_name: "anon-should-fail" });
+  check("Anon CANNOT call create_group RPC", !!anonCreate.error, "expected permission denied");
+  const anonDraw = await anon.rpc("draw_secret_santa", {
+    p_group_id: "00000000-0000-0000-0000-000000000000",
+  });
+  check("Anon CANNOT call draw_secret_santa RPC", !!anonDraw.error, "expected permission denied");
+
   // --- Alice builds a group, list, items ----------------------------------
   // Group creation goes through the create_group RPC (atomic group + admin
   // membership); direct membership self-insert is no longer permitted.
@@ -254,6 +265,42 @@ async function run() {
   const drawnCheck = await bob.client.rpc("santa_is_drawn", { p_group_id: group.id });
   check("santa_is_drawn() is true after the draw", drawnCheck.data === true);
 
+  // Exclusions: admin-managed pairs who must never draw each other.
+  const bobExcl = await bob.client
+    .from("santa_exclusions")
+    .insert({ group_id: group.id, user_a: bob.id, user_b: carol.id });
+  check("Non-admin CANNOT add a Santa exclusion", !!bobExcl.error, "expected RLS error");
+  const aliceExcl = await alice.client
+    .from("santa_exclusions")
+    .insert({ group_id: group.id, user_a: alice.id, user_b: bob.id });
+  check("Admin can add a Santa exclusion", !aliceExcl.error, aliceExcl.error?.message);
+  const bobReadExcl = await bob.client.from("santa_exclusions").select("*").eq("group_id", group.id);
+  check("Non-admin CANNOT read exclusions", (bobReadExcl.data?.length ?? 0) === 0);
+  const aliceReadExcl = await alice.client
+    .from("santa_exclusions")
+    .select("*")
+    .eq("group_id", group.id);
+  check("Admin can read exclusions", (aliceReadExcl.data?.length ?? 0) === 1);
+  // The re-draw must honor the exclusion in BOTH directions.
+  const reDraw = await alice.client.rpc("draw_secret_santa", { p_group_id: group.id });
+  check("Admin can re-draw with an exclusion in place", !reDraw.error, reDraw.error?.message);
+  const aliceA = await alice.client
+    .from("santa_assignments")
+    .select("receiver_id")
+    .eq("group_id", group.id)
+    .eq("giver_id", alice.id)
+    .maybeSingle();
+  const bobA = await bob.client
+    .from("santa_assignments")
+    .select("receiver_id")
+    .eq("group_id", group.id)
+    .eq("giver_id", bob.id)
+    .maybeSingle();
+  check(
+    "Draw honors the exclusion (Alice and Bob never draw each other)",
+    aliceA.data?.receiver_id !== bob.id && bobA.data?.receiver_id !== alice.id,
+  );
+
   console.log("\nPer-item discussion:");
   const bobComment = await bob.client
     .from("item_comments")
@@ -286,6 +333,21 @@ async function run() {
   check("Co-member can read a profile", (bobSeesAlice.data?.length ?? 0) === 1);
   const mallorySeesAlice = await mallory.client.from("profiles").select("*").eq("id", alice.id);
   check("Outsider cannot read a profile", (mallorySeesAlice.data?.length ?? 0) === 0);
+
+  console.log("\nNotification preferences:");
+  const aliceSetPref = await alice.client
+    .from("notification_preferences")
+    .upsert({ user_id: alice.id, new_item: false });
+  check("User can set own notification prefs", !aliceSetPref.error, aliceSetPref.error?.message);
+  const bobForgePref = await bob.client
+    .from("notification_preferences")
+    .insert({ user_id: alice.id, new_item: false });
+  check("Cannot write notification prefs for another user", !!bobForgePref.error, "expected RLS error");
+  const bobReadsAlicePref = await bob.client
+    .from("notification_preferences")
+    .select("*")
+    .eq("user_id", alice.id);
+  check("Cannot read another user's notification prefs", (bobReadsAlicePref.data?.length ?? 0) === 0);
 
   // --- admin management ----------------------------------------------------
   console.log("\nAdmin member management:");

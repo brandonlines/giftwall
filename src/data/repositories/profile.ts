@@ -22,6 +22,16 @@ export const profileRepo = {
     if (error) throw error;
   },
 
+  // Optional — visible to group co-members so they can ship gifts. Empty saves
+  // as NULL (cleared). RLS lets you write only your own row.
+  async setShippingAddress(address: string | null): Promise<void> {
+    const uid = await currentUserId();
+    const { error } = await supabase
+      .from("profiles")
+      .upsert({ id: uid, shipping_address: address?.trim() ? address.trim() : null });
+    if (error) throw error;
+  },
+
   // Uploads a base64 image (from the picker) to the user's own storage folder,
   // saves the public URL on the profile, and returns it. A cache-busting query
   // param forces clients to refetch after an overwrite at the same path.

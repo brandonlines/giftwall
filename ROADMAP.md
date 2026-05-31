@@ -1,52 +1,79 @@
 # giftwall — gap analysis & roadmap
 
-_Snapshot: 2026-05-30. The app is feature-rich (60+ features), backend is live,
-the Surprise Wall is proven (RLS test 34/34), Apple sign-in works, and it's on
-TestFlight. This is an honest list of what's still missing, ranked by impact._
+_Snapshot: 2026-05-31. The app is feature-rich, the backend is live, the Surprise
+Wall is proven (RLS suite), Apple + Google sign-in work, and it's on TestFlight.
+This is an honest list of what's still missing, ranked by impact._
 
-## 1. Launch blockers — fix before the family beta
+## ✅ Shipped since the 2026-05-30 snapshot
 
-| Gap | Why it matters | Effort |
-|---|---|---|
-| **Google + email sign-in broken** | Family who don't use Apple literally can't get in. Google = "localhost" redirect (Supabase Redirect URLs); email = no code (Magic Link/Confirm-signup templates need `{{ .Token }}`). | Small (dashboard) |
-| **Push notifications not fully wired** | The `items`→`send-push` webhook + `WEBHOOK_SECRET`. Deployed but not triggered. | Small (dashboard) |
-| **New features untested on live DB** | Group gifting (0017) + reactions (0018) are built/green but never run against the live DB or a device. Need `db push` + `test:rls` + a real two-account try. | Small–medium |
-| **Real support email** ✅ | Done — `support@gift-well.ca` across the policy, in-app legal, and account screens. | — |
+- **Secret Santa + event types** — draw names (secret, server-side derangement),
+  per-group event type, and **exclusions** (couples never drawn together).
+- **Recurring yearly occasions** — birthdays roll forward instead of reading
+  "300 days ago".
+- **Group gifting clarity** — `is_group_gift` flag: each item shows ONE path
+  (solo claim _or_ chip-in), not both.
+- **Realtime everywhere** — reactions, contributions, and Secret Santa now
+  live-update (no longer claims-only).
+- **Purchased view** in Shopping (filter To-buy/Purchased, sort by group/name).
+- **Better price scraping** — JSON-LD + microdata, not just OpenGraph.
+- **Backend security pass** — RPCs locked to authenticated callers (0021),
+  groups UPDATE given a WITH CHECK (0022), send-push fails closed on a missing
+  webhook secret, full write-path RLS audit. See `SECURITY.md`.
 
-## 2. Top missing features (ranked by demand)
+## ⚠️ Operator to-do (not code)
 
-1. **Secret Santa / gift exchange (draw names).** The #1 reason families use apps like this at the holidays. Assign who buys for whom, kept secret (RLS so you only see your own assignment + optional exclusions). High demand, medium-high effort.
-2. **Post-occasion reveal + thank-you.** After the event date passes, let the recipient finally see who gave/claimed what and send thanks — closes the gifting loop. Needs a careful RLS change (allow the owner to see claims once `event_date` < today). Security-sensitive; do it deliberately.
-3. **Shipping address per person.** "Where do I send it?" for distributed families. A profile field + group-visible, owner-editable.
-4. **Recurring occasions.** Birthdays repeat yearly; today `event_date` is one-off. Auto-roll to next year.
-5. **Notification preferences.** Per-type toggles (new item, comment, occasion reminder) once push is live.
-6. **Occasion reminders (scheduled push).** `event_date` exists but nothing fires "3 days until Mom's birthday" — needs a scheduled/cron Edge Function.
+- **Apply pending migrations + redeploy** to the live DB so the above goes out:
+  `npx supabase db push` (0017–0024), `npx supabase functions deploy scrape-link`
+  and `send-push`, then `npx eas update --branch production`. Re-run
+  `npm run test:rls` after the push.
+- **Set `WEBHOOK_SECRET`** (function secret + the webhook's `x-webhook-secret`
+  header) — send-push now refuses to run without it.
+- **Email sign-in** — confirm the Magic Link / signup templates include
+  `{{ .Token }}` so OTP codes arrive (Google + Apple already work).
 
-## 3. Consistency & robustness gaps
+## Top missing features (ranked by demand)
 
-- **Claims vs. group-gift contributions overlap.** An item can be individually *claimed* AND *chipped-in* at the same time — confusing. Product decision needed: a per-item mode ("solo gift" vs "group gift") so the UI shows one path, not both.
-- **Realtime is claims-only.** `contributions` and `reactions` are in the realtime publication but the list screen only subscribes to claim changes — so reactions/chip-ins don't live-update across devices (a refresh shows them). Wire `subscribeToReactions` / `subscribeToContributions`.
-- **Offline queue is partial.** Covers claims/comments/items, not contributions/reactions (those just error offline instead of queuing).
-- **Currency handling is thin.** `formatPrice` is `$`-first + a raw code; no real multi-currency formatting/locale.
+1. **Post-occasion reveal + thank-you.** After the event passes, let the
+   recipient finally see who gave what and say thanks. **Security-sensitive and
+   deferred on purpose:** a naive "event_date < today → reveal" is exploitable —
+   the owner controls `event_date` and could back-date it to peek early. Needs an
+   immutable, system-set reveal time (not owner-editable to the past) before it's
+   safe to touch the Surprise Wall predicate.
+2. **Shipping address per person.** "Where do I send it?" for distributed
+   families — a profile field, visible to co-members, owner-editable. (PII, so
+   scope it exactly like profiles: co-members only.)
+3. **Notification preferences.** Per-type toggles (new item, comment, occasion
+   reminder). Best done once push is fully live.
+4. **Occasion reminders (scheduled push).** `event_date`/recurrence exist, but
+   nothing fires "3 days until Mom's birthday" — needs a scheduled/cron Edge
+   Function reusing the send-push fan-out.
 
-## 4. Operational / store checklist (not features)
+## Consistency & robustness gaps
+
+- **Offline queue is partial.** Covers claims/comments/items, not
+  contributions/reactions (those error offline instead of queuing).
+- **Currency handling is thin.** `formatPrice` is `$`-first + a raw code; no real
+  multi-currency/locale formatting.
+
+## Operational / store checklist
 
 - [ ] Host `docs/privacy.html` → real Privacy Policy URL (see `docs/README.md`).
 - [ ] App Store **screenshots** (plan in `STORE.md`).
-- [ ] Real **app icon** ✅ done · **Sentry DSN** (crash reporting is dormant until set).
-- [ ] Broad **device testing** — only Apple sign-in + the RLS suite have run for real.
-- [ ] Google/email auth + push webhook (also in §1).
-- [ ] Apple **external TestFlight** beta review (first build) before non-team testers.
+- [x] Real **app icon** · [ ] **Sentry DSN** (crash reporting dormant until set).
+- [ ] Broad **device testing** beyond the RLS suite + Apple/Google sign-in.
+- [ ] Apple **external TestFlight** review before non-team testers.
 
-## 5. Nice-to-haves / later
+## Nice-to-haves / later
 
 Global search across groups · wishlist item reordering · multiple photos per item ·
 "reserve for later" soft-interest vs hard claim · richer profiles · web-app polish ·
-group themes/cover photos · gift-idea suggestions by occasion/budget.
+group themes/cover photos.
 
 ---
 
-**Honest take:** the core (the Surprise Wall, shared lists, claims, group gifting)
-is strong and proven. The biggest *real* gaps before a confident launch are the
-**two sign-in fixes** and **push wiring** (both small, dashboard-only), then
-**live-testing the new features**. The biggest *growth* feature is **Secret Santa**.
+**Honest take:** the core (Surprise Wall, shared lists, claims, group gifting,
+Secret Santa) is strong and proven, and the backend is now hardened and
+documented. The remaining work before a confident public launch is mostly
+operator/dashboard (apply migrations, set the webhook secret, email templates)
+plus the **post-occasion reveal** — the one feature that must be designed
+carefully because it deliberately relaxes the Surprise Wall.
