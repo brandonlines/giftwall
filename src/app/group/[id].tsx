@@ -19,6 +19,7 @@ import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
 import { inviteMessage } from "@/lib/links";
 import { occasionCountdown, isValidDateStr } from "@/lib/dates";
+import { formatPrice } from "@/lib/format";
 import { groupsRepo } from "@/data/repositories/groups";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { santaRepo } from "@/data/repositories/santa";
@@ -284,6 +285,11 @@ export default function GroupScreen() {
               {group.event_type === "secret_santa" ? (
                 <Card style={styles.santaCard}>
                   <Text style={styles.santaTitle} accessibilityRole="header">🤫 Secret Santa</Text>
+                  {group.santa_budget_cents != null ? (
+                    <Text style={styles.santaBudget}>
+                      🎁 {formatPrice(group.santa_budget_cents, null)} per gift
+                    </Text>
+                  ) : null}
                   {santaReceiver ? (
                     <Text style={styles.santaText}>
                       You&apos;re buying for:{" "}
@@ -474,6 +480,7 @@ const makeStyles = (c: ThemeColors) =>
     membersText: { color: c.accent, fontWeight: "600" },
     santaCard: { padding: 16, marginTop: 8, gap: 8 },
     santaTitle: { fontSize: 16, fontWeight: "800", color: c.text },
+    santaBudget: { fontSize: 14, fontWeight: "700", color: c.accent },
     santaText: { fontSize: 15, color: c.text, lineHeight: 21 },
     santaName: { fontWeight: "800", color: c.accent },
     santaLink: { color: c.accent, fontWeight: "700", textAlign: "center", paddingVertical: 4 },

@@ -32,9 +32,9 @@ export interface Database {
         Relationships: [];
       };
       groups: {
-        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; created_at: string };
+        Row: { id: string; name: string; created_by: string | null; invite_code: string; event_type: EventType; background_url: string | null; santa_budget_cents: number | null; created_at: string };
         Insert: { id?: string; name: string; created_by: string; event_type?: EventType };
-        Update: { name?: string; event_type?: EventType; background_url?: string | null };
+        Update: { name?: string; event_type?: EventType; background_url?: string | null; santa_budget_cents?: number | null };
         Relationships: [];
       };
       memberships: {

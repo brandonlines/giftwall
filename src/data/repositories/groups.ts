@@ -190,4 +190,14 @@ export const groupsRepo = {
     });
     if (error) throw error;
   },
+
+  // Admin-only (enforced by the groups UPDATE policy): set/clear the Secret
+  // Santa spending cap.
+  async setSantaBudget(groupId: string, cents: number | null): Promise<void> {
+    const { error } = await supabase
+      .from("groups")
+      .update({ santa_budget_cents: cents })
+      .eq("id", groupId);
+    if (error) throw error;
+  },
 };

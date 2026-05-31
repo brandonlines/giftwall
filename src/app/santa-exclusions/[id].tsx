@@ -1,12 +1,15 @@
 import { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
 import { groupsRepo, type MemberWithProfile } from "@/data/repositories/groups";
 import { santaRepo } from "@/data/repositories/santa";
-import { useThemedStyles } from "@/theme/provider";
+import { formatPrice } from "@/lib/format";
+import { parsePriceToCents } from "@/lib/validation";
+import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { SantaExclusion } from "@/types/database";
 
@@ -16,24 +19,47 @@ import type { SantaExclusion } from "@/types/database";
 export default function SantaExclusionsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const showToast = useToast();
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [exclusions, setExclusions] = useState<SantaExclusion[]>([]);
   const [firstPick, setFirstPick] = useState<string | null>(null);
+  const [budgetText, setBudgetText] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [m, ex] = await Promise.all([
+      const [m, ex, g] = await Promise.all([
         groupsRepo.membersWithProfiles(id),
         santaRepo.listExclusions(id),
+        groupsRepo.get(id),
       ]);
       setMembers(m);
       setExclusions(ex);
+      setBudgetText(
+        g.santa_budget_cents != null ? (g.santa_budget_cents / 100).toFixed(2) : "",
+      );
     } catch (e) {
       showToast(String((e as Error).message) || "Couldn't load", "error");
     }
   }, [id, showToast]);
+
+  async function saveBudget() {
+    const cents = budgetText.trim() ? parsePriceToCents(budgetText) : null;
+    if (budgetText.trim() && (cents == null || cents <= 0)) {
+      showToast("Enter a valid amount", "error");
+      return;
+    }
+    setBusy(true);
+    try {
+      await groupsRepo.setSantaBudget(id, cents);
+      showToast(cents ? "Budget set 🎁" : "Budget cleared", "success");
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't save", "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -101,6 +127,22 @@ export default function SantaExclusionsScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View>
+            <Text style={styles.sectionLabel}>Spending cap (optional)</Text>
+            <View style={styles.budgetRow}>
+              <Text style={styles.dollar}>$</Text>
+              <TextInput
+                style={styles.budgetInput}
+                placeholder="e.g. 25"
+                placeholderTextColor={colors.placeholder}
+                keyboardType="decimal-pad"
+                value={budgetText}
+                onChangeText={setBudgetText}
+                accessibilityLabel="Secret Santa spending cap"
+              />
+              <Button title="Save" variant="secondary" onPress={saveBudget} loading={busy} />
+            </View>
+            <Text style={styles.budgetHint}>Shown to everyone so nobody over- or under-spends.</Text>
+
             <Text style={styles.intro}>
               Pick two people who should never draw each other — like couples who
               already buy gifts together. The draw keeps them apart.
@@ -159,6 +201,19 @@ export default function SantaExclusionsScreen() {
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
+    budgetRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    dollar: { fontSize: 18, fontWeight: "700", color: c.text },
+    budgetInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
+    budgetHint: { fontSize: 12, color: c.pageTextMuted, marginTop: 6, marginBottom: 4 },
     intro: { fontSize: 14, color: c.pageTextMuted, lineHeight: 20, marginBottom: 12 },
     sectionLabel: {
       fontSize: 13,
