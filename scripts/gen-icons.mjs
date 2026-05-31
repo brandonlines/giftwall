@@ -23,6 +23,27 @@ function gift(boxFill, ribbon) {
   `;
 }
 
+// Subtle confetti scattered around (not over) the gift — white sparkles, dots,
+// and diamonds, kept away from the centre so the gift stays crisp.
+const sparkle = (cx, cy, r, o) => {
+  const a = r * 0.28;
+  return `<path d="M ${cx} ${cy - r} L ${cx + a} ${cy - a} L ${cx + r} ${cy} L ${cx + a} ${cy + a} L ${cx} ${cy + r} L ${cx - a} ${cy + a} L ${cx - r} ${cy} L ${cx - a} ${cy - a} Z" fill="#FFFFFF" opacity="${o}"/>`;
+};
+const dot = (cx, cy, r, o) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#FFFFFF" opacity="${o}"/>`;
+const diamond = (cx, cy, r, o) =>
+  `<path d="M ${cx} ${cy - r} L ${cx + r} ${cy} L ${cx} ${cy + r} L ${cx - r} ${cy} Z" fill="#FFFFFF" opacity="${o}"/>`;
+
+const CONFETTI = `
+  ${sparkle(255, 250, 30, 0.9)}
+  ${dot(350, 348, 13, 0.5)}
+  ${diamond(775, 248, 24, 0.85)}
+  ${dot(688, 350, 12, 0.5)}
+  ${sparkle(196, 505, 20, 0.6)}
+  ${sparkle(826, 500, 22, 0.7)}
+  ${dot(250, 722, 14, 0.55)}
+  ${diamond(792, 716, 18, 0.6)}
+`;
+
 const GRAD = `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
   <stop offset="0" stop-color="${TOP}"/><stop offset="1" stop-color="${BOT}"/>
 </linearGradient></defs>`;
@@ -31,7 +52,9 @@ function frame(inner) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">${inner}</svg>`;
 }
 
-const ICON = frame(`${GRAD}<rect width="1024" height="1024" fill="url(#g)"/>${gift(WHITE, GOLD)}`);
+const ICON = frame(
+  `${GRAD}<rect width="1024" height="1024" fill="url(#g)"/>${CONFETTI}${gift(WHITE, GOLD)}`,
+);
 const FG = frame(gift(WHITE, GOLD)); // android foreground (transparent)
 const BG = frame(`${GRAD}<rect width="1024" height="1024" fill="url(#g)"/>`); // android background
 const MONO = frame(gift(WHITE, WHITE)); // single-colour silhouette (themed icons / splash)
