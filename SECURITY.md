@@ -64,6 +64,14 @@ purchases — so a recipient can't infer a buyer from the timeline.
 - **Profiles leak nothing cross-group.** Readable only for yourself and users
   with whom you share at least one group (a `memberships ⋈ memberships` join),
   not the whole table.
+- **Every write path self-binds the actor.** INSERT policies on `claims`,
+  `contributions`, `item_comments`, and `reactions` all require the row's actor
+  id to equal `auth.uid()` — you can't forge a row as someone else — and (for the
+  claim-like tables) require `can_see_claims_for_item`, so a recipient can't even
+  write a probe row against their own item. Membership can be gained only through
+  the `create_group` / `redeem_invite` RPCs or an admin add; the open self-join
+  policy was removed in `0015`. Every UPDATE policy pairs `USING` with an equal
+  `WITH CHECK` — the one exception, `groups`, was fixed in `0022`.
 
 ## Secret Santa secrecy
 
