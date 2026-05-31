@@ -160,6 +160,23 @@ export interface Database {
         Update: { platform?: string | null };
         Relationships: [];
       };
+      notification_preferences: {
+        Row: {
+          user_id: string;
+          new_item: boolean;
+          new_comment: boolean;
+          occasion_reminder: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          new_item?: boolean;
+          new_comment?: boolean;
+          occasion_reminder?: boolean;
+        };
+        Update: { new_item?: boolean; new_comment?: boolean; occasion_reminder?: boolean };
+        Relationships: [];
+      };
       item_comments: {
         Row: {
           id: string;
@@ -234,5 +251,6 @@ export type Reaction = T["reactions"]["Row"];
 export type SantaAssignment = T["santa_assignments"]["Row"];
 export type SantaExclusion = T["santa_exclusions"]["Row"];
 export type PushToken = T["push_tokens"]["Row"];
+export type NotificationPrefs = T["notification_preferences"]["Row"];
 export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];

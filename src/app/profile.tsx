@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -15,6 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { profileRepo } from "@/data/repositories/profile";
+import {
+  notificationsRepo,
+  type NotificationSettings,
+} from "@/data/repositories/notifications";
 import { accountRepo } from "@/data/repositories/account";
 import { signOut } from "@/lib/auth";
 import { useAuth } from "@/providers/auth";
@@ -32,18 +37,32 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [prefs, setPrefs] = useState<NotificationSettings>({
+    new_item: true,
+    new_comment: true,
+    occasion_reminder: true,
+  });
 
   useEffect(() => {
-    profileRepo
-      .getMine()
-      .then((p) => {
+    Promise.all([profileRepo.getMine(), notificationsRepo.getMine()])
+      .then(([p, n]) => {
         setName(p?.display_name ?? "");
         setAddress(p?.shipping_address ?? "");
         setAvatar(p?.avatar_url ?? null);
+        setPrefs(n);
       })
       .catch((e) => Alert.alert("Couldn't load profile", String((e as Error).message)))
       .finally(() => setLoading(false));
   }, []);
+
+  // Toggles persist immediately (optimistic), reverting on failure.
+  function togglePref(key: keyof NotificationSettings, value: boolean) {
+    setPrefs((p) => ({ ...p, [key]: value }));
+    notificationsRepo.update({ [key]: value }).catch((e) => {
+      Alert.alert("Couldn't save", String((e as Error).message));
+      setPrefs((p) => ({ ...p, [key]: !value }));
+    });
+  }
 
   async function changePhoto() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -186,6 +205,28 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        <Text style={[styles.label, { marginTop: 32 }]}>Notifications</Text>
+        <Text style={styles.hint}>Choose which push notifications you get.</Text>
+        <Card style={styles.prefList}>
+          {(
+            [
+              ["new_item", "New gift ideas"],
+              ["new_comment", "New comments"],
+              ["occasion_reminder", "Occasion reminders"],
+            ] as const
+          ).map(([key, label], i) => (
+            <View key={key} style={[styles.prefRow, i > 0 && styles.prefRowBorder]}>
+              <Text style={styles.prefLabel}>{label}</Text>
+              <Switch
+                value={prefs[key]}
+                onValueChange={(v) => togglePref(key, v)}
+                disabled={loading}
+                accessibilityLabel={label}
+              />
+            </View>
+          ))}
+        </Card>
+
         <View style={styles.meta}>
           <Text style={styles.metaText}>Signed in as {user?.email}</Text>
         </View>
@@ -239,6 +280,16 @@ const makeStyles = (c: ThemeColors) =>
       color: c.inputText,
     },
     addressInput: { minHeight: 76, textAlignVertical: "top" },
+    prefList: { paddingVertical: 4, paddingHorizontal: 8 },
+    prefRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+    },
+    prefRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
+    prefLabel: { fontSize: 15, color: c.text, flex: 1 },
     themeList: { gap: 10 },
     themeRow: {
       flexDirection: "row",

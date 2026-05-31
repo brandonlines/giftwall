@@ -334,6 +334,21 @@ async function run() {
   const mallorySeesAlice = await mallory.client.from("profiles").select("*").eq("id", alice.id);
   check("Outsider cannot read a profile", (mallorySeesAlice.data?.length ?? 0) === 0);
 
+  console.log("\nNotification preferences:");
+  const aliceSetPref = await alice.client
+    .from("notification_preferences")
+    .upsert({ user_id: alice.id, new_item: false });
+  check("User can set own notification prefs", !aliceSetPref.error, aliceSetPref.error?.message);
+  const bobForgePref = await bob.client
+    .from("notification_preferences")
+    .insert({ user_id: alice.id, new_item: false });
+  check("Cannot write notification prefs for another user", !!bobForgePref.error, "expected RLS error");
+  const bobReadsAlicePref = await bob.client
+    .from("notification_preferences")
+    .select("*")
+    .eq("user_id", alice.id);
+  check("Cannot read another user's notification prefs", (bobReadsAlicePref.data?.length ?? 0) === 0);
+
   // --- admin management ----------------------------------------------------
   console.log("\nAdmin member management:");
   const bobPromote = await bob.client

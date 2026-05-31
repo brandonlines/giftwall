@@ -68,10 +68,22 @@ Deno.serve(async (req) => {
   const recipientIds = (members ?? []).map((m) => m.user_id);
   if (recipientIds.length === 0) return new Response("no recipients", { status: 200 });
 
+  // Respect notification preferences: skip anyone who turned new_item off. A
+  // missing row means opted in (the default), so we exclude only explicit false.
+  const { data: prefs } = await admin
+    .from("notification_preferences")
+    .select("user_id, new_item")
+    .in("user_id", recipientIds);
+  const optedOut = new Set(
+    (prefs ?? []).filter((p) => p.new_item === false).map((p) => p.user_id),
+  );
+  const notifyIds = recipientIds.filter((id) => !optedOut.has(id));
+  if (notifyIds.length === 0) return new Response("no recipients", { status: 200 });
+
   const { data: tokens } = await admin
     .from("push_tokens")
     .select("token")
-    .in("user_id", recipientIds);
+    .in("user_id", notifyIds);
 
   const messages = (tokens ?? []).map((t) => ({
     to: t.token,
