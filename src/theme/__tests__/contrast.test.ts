@@ -13,25 +13,42 @@ describe("contrast math", () => {
   });
 });
 
-// WCAG AA floor for large/bold UI labels (and the absolute floor for any text).
-// This would have caught the old white-on-pink "Claimed by someone" (~2.7:1).
-const MIN_RATIO = 3.0;
+type Pair = [keyof ThemeColors, keyof ThemeColors];
 
-const PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
+// WCAG 2.1 AA: normal/small text needs 4.5:1. Body copy, muted captions, input
+// text, placeholders, and chip/badge labels (which render at body size) live
+// here — this is the AODA bar the user flagged.
+const BODY_TEXT: Pair[] = [
+  ["text", "surface"],
+  ["textMuted", "surface"],
+  ["pageText", "background"],
+  ["pageTextMuted", "background"],
+  ["inputText", "inputBg"],
+  ["placeholder", "inputBg"],
+  ["onAccentSoft", "accentSoft"],
+  ["onClaimedOther", "claimedOther"],
+];
+
+// Large + bold UI labels (button text, the nav-bar title) qualify for the 3:1
+// large-text exemption, so the brand-colored fills don't have to be darkened.
+const UI_LABEL: Pair[] = [
   ["onPrimary", "primary"],
   ["onClaim", "claim"],
   ["onClaimMine", "claimMine"],
-  ["onClaimedOther", "claimedOther"],
   ["onDanger", "danger"],
-  ["onAccentSoft", "accentSoft"],
+  ["headerTint", "headerBg"],
 ];
 
-describe("theme token contrast (WCAG)", () => {
+describe("theme token contrast (WCAG AA)", () => {
   for (const theme of Object.values(themes)) {
-    for (const [fgKey, bgKey] of PAIRS) {
-      it(`${theme.key}: ${String(fgKey)} on ${String(bgKey)} ≥ ${MIN_RATIO}:1`, () => {
-        const ratio = contrastRatio(theme.colors[fgKey], theme.colors[bgKey]);
-        expect(ratio).toBeGreaterThanOrEqual(MIN_RATIO);
+    for (const [fg, bg] of BODY_TEXT) {
+      it(`${theme.key}: ${String(fg)} on ${String(bg)} ≥ 4.5:1 (body text)`, () => {
+        expect(contrastRatio(theme.colors[fg], theme.colors[bg])).toBeGreaterThanOrEqual(4.5);
+      });
+    }
+    for (const [fg, bg] of UI_LABEL) {
+      it(`${theme.key}: ${String(fg)} on ${String(bg)} ≥ 3:1 (large UI label)`, () => {
+        expect(contrastRatio(theme.colors[fg], theme.colors[bg])).toBeGreaterThanOrEqual(3.0);
       });
     }
   }
