@@ -1,22 +1,65 @@
 import { useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Button } from "@/components/ui/button";
 import { Screen } from "@/components/ui/screen";
 import { useToast } from "@/components/ui/toast";
+import { barcodeRepo } from "@/data/repositories/barcode";
+import { scrapeRepo } from "@/data/repositories/scrape";
+import { wishlistsRepo } from "@/data/repositories/wishlists";
 import { useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 
-// Scan a product barcode to start an add-item. CameraView only mounts on
-// native; on web (and the export bundle) we show a "use the app" message so the
-// build stays green. Real scanning needs a device dev build.
+// Scan a product barcode (or a QR that encodes a product URL) to add an item.
+// CameraView only mounts on native; on web we show a "use the app" message so
+// the export bundle stays green. Real scanning needs a device — the Simulator
+// has no camera.
 export default function ScanScreen() {
   const router = useRouter();
+  const { listId } = useLocalSearchParams<{ listId?: string }>();
   const styles = useThemedStyles(makeStyles);
   const showToast = useToast();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function handleScan(data: string) {
+    setBusy(true);
+    try {
+      const raw = data.trim();
+      let product: { title: string; imageUrl: string | null; url: string | null } | null = null;
+
+      if (/^https?:\/\//i.test(raw)) {
+        // QR codes often encode a product page — scrape it like a pasted link.
+        const p = await scrapeRepo.fromUrl(raw);
+        if (p.title || p.image) product = { title: p.title ?? raw, imageUrl: p.image, url: raw };
+      } else {
+        const p = await barcodeRepo.lookup(raw);
+        if (p) product = { title: p.title, imageUrl: p.imageUrl, url: null };
+      }
+
+      if (!product?.title) {
+        showToast("Couldn't identify that — add it by name instead", "info");
+        router.back();
+        return;
+      }
+      if (listId) {
+        await wishlistsRepo.addItem(listId, {
+          title: product.title,
+          image_url: product.imageUrl,
+          url: product.url,
+        });
+        showToast(`Added ${product.title} 🎁`, "success");
+      } else {
+        showToast(`Scanned ${product.title}`, "success");
+      }
+      router.back();
+    } catch (e) {
+      showToast(String((e as Error).message) || "Scan failed", "error");
+      router.back();
+    }
+  }
 
   function info(emoji: string, title: string, body: string, action?: React.ReactNode) {
     return (
@@ -63,13 +106,19 @@ export default function ScanScreen() {
             ? undefined
             : (result) => {
                 setScanned(true);
-                showToast(`Scanned: ${result.data}`, "success");
-                router.back();
+                void handleScan(result.data);
               }
         }
       />
       <View style={styles.hintBar}>
-        <Text style={styles.hintText}>Point the camera at a barcode</Text>
+        {busy ? (
+          <View style={styles.hintRow}>
+            <ActivityIndicator color="#fff" />
+            <Text style={styles.hintText}>Looking up product…</Text>
+          </View>
+        ) : (
+          <Text style={styles.hintText}>Point the camera at a barcode</Text>
+        )}
       </View>
     </Screen>
   );
@@ -90,5 +139,6 @@ const makeStyles = (c: ThemeColors) =>
       paddingHorizontal: 18,
       borderRadius: 12,
     },
+    hintRow: { flexDirection: "row", alignItems: "center", gap: 10 },
     hintText: { color: "#fff", fontWeight: "600" },
   });

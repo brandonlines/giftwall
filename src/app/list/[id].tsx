@@ -522,7 +522,7 @@ export default function ListScreen() {
               <View style={styles.addHeaderRow}>
                 <Text style={styles.sectionLabel}>Add an item</Text>
                 <Pressable
-                  onPress={() => router.push("/scan")}
+                  onPress={() => router.push(`/scan?listId=${id}`)}
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Scan a barcode"
