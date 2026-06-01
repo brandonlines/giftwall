@@ -264,6 +264,20 @@ function microdataPrice(html: string): { price: number | null; currency: string 
   return { price: parsePriceCents(price), currency };
 }
 
+// Resolve a scraped image reference to an absolute http(s) URL. og:image is
+// frequently relative ("/img/x.jpg") or protocol-relative ("//cdn/x.jpg"),
+// which a native <Image> silently can't load — resolve it against the page URL
+// so the preview actually renders, and drop anything non-http(s).
+function absolutizeImage(raw: string | null, base: string): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw.trim(), base);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 const SYMBOL_CURRENCY: Record<string, string> = {
   "$": "USD",
   "£": "GBP",
@@ -370,8 +384,10 @@ Deno.serve(async (req) => {
       }
     }
     // Image: OpenGraph first, then JSON-LD Product image, then Twitter card.
-    const image =
-      metaContent(html, "og:image") ?? ld.image ?? metaContent(html, "twitter:image");
+    const image = absolutizeImage(
+      metaContent(html, "og:image") ?? ld.image ?? metaContent(html, "twitter:image"),
+      url,
+    );
 
     return json({ title, image, price_cents, currency });
   } catch (e) {
