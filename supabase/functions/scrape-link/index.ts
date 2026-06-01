@@ -13,7 +13,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 
 const MAX_REDIRECTS = 4;
-const MAX_BYTES = 1_000_000; // 1 MB of HTML is plenty for meta tags
+const MAX_BYTES = 2_500_000; // big retail pages (Amazon ~2 MB) push price/JSON-LD past 1 MB
 const FETCH_TIMEOUT_MS = 8000;
 
 function ipv4ToInt(ip: string): number | null {
@@ -105,7 +105,16 @@ async function safeFetch(rawUrl: string): Promise<Response> {
       res = await fetch(u.toString(), {
         redirect: "manual",
         signal: ctrl.signal,
-        headers: { "User-Agent": "giftwall-link-preview/1.0" },
+        // A real browser UA + Accept-Language: many retailers serve bots a
+        // stripped page (or a block page — Amazon's "automated access" wall),
+        // which is why prices/JSON-LD went missing. Deno's fetch transparently
+        // decompresses gzip/br, so we still parse plain HTML below.
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9",
+        },
       });
     } finally {
       clearTimeout(timer);
@@ -255,6 +264,51 @@ function microdataPrice(html: string): { price: number | null; currency: string 
   return { price: parsePriceCents(price), currency };
 }
 
+const SYMBOL_CURRENCY: Record<string, string> = {
+  "$": "USD",
+  "£": "GBP",
+  "€": "EUR",
+  "¥": "JPY",
+  "₹": "INR",
+};
+
+function isAmazonHost(host: string): boolean {
+  return /(^|\.)amazon\.[a-z.]+$/i.test(host);
+}
+
+// Amazon exposes no OG/JSON-LD price and renders the buybox client-side, so the
+// static HTML often has NO price at all (and we must never grab a dollar amount
+// from marketing copy). These patterns are anchored tightly on Amazon's own
+// price markup, so they return a real price when present and null otherwise.
+function amazonPrice(html: string): { price: number | null; currency: string | null } {
+  // 1. <span class="a-offscreen">$29.99</span> — require the currency symbol so
+  //    an empty/placeholder span (JS-filled) doesn't match.
+  const off = html.match(/class=["']a-offscreen["'][^>]*>\s*([$£€¥₹])\s?([\d,]+\.\d{2})/i);
+  if (off) return { price: parsePriceCents(off[2]), currency: SYMBOL_CURRENCY[off[1]] ?? null };
+
+  // 2. Split price: <span class="a-price-whole">29</span><span class="a-price-fraction">99</span>
+  const split = html.match(
+    /class=["']a-price-whole["'][^>]*>\s*([\d,]+)[.,]?\s*<\/span>\s*<span[^>]*class=["']a-price-fraction["'][^>]*>\s*(\d{2})/i,
+  );
+  if (split) {
+    const cents = parsePriceCents(`${split[1].replace(/,/g, "")}.${split[2]}`);
+    if (cents != null) return { price: cents, currency: null };
+  }
+
+  // 3. Legacy buybox ids.
+  const block = html.match(
+    /id=["']priceblock_(?:ourprice|dealprice|saleprice)["'][^>]*>\s*([$£€¥₹])?\s?([\d,]+\.\d{2})/i,
+  );
+  if (block) {
+    return {
+      price: parsePriceCents(block[2]),
+      currency: block[1] ? (SYMBOL_CURRENCY[block[1]] ?? null) : null,
+    };
+  }
+
+  return { price: null, currency: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -301,8 +355,20 @@ Deno.serve(async (req) => {
       metaContent(html, "og:price:currency") ?? metaContent(html, "product:price:currency");
     const ld = fromJsonLd(html);
     const micro = microdataPrice(html);
-    const price_cents = ogPrice ?? ld.price ?? micro.price;
-    const currency = ogCurrency ?? ld.currency ?? micro.currency;
+    let price_cents = ogPrice ?? ld.price ?? micro.price;
+    let currency = ogCurrency ?? ld.currency ?? micro.currency;
+    // Amazon-specific best effort when the standard sources came up empty.
+    if (price_cents == null) {
+      try {
+        if (isAmazonHost(new URL(url).hostname)) {
+          const az = amazonPrice(html);
+          price_cents = az.price;
+          currency = currency ?? az.currency;
+        }
+      } catch {
+        // unparseable host — skip the Amazon path
+      }
+    }
     // Image: OpenGraph first, then JSON-LD Product image, then Twitter card.
     const image =
       metaContent(html, "og:image") ?? ld.image ?? metaContent(html, "twitter:image");
