@@ -434,7 +434,7 @@ export default function ListScreen() {
           <Text style={styles.revealLinkText}>🎁 See who gave what →</Text>
         </Pressable>
       ) : null}
-      {items.length > 3 && (
+      {items.length > 1 && (
         <View style={styles.searchWrap}>
           <TextInput
             style={styles.search}
