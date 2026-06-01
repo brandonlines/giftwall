@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
@@ -11,7 +11,7 @@ import { claimsRepo } from "@/data/repositories/claims";
 import { contributionsRepo } from "@/data/repositories/contributions";
 import { formatPrice } from "@/lib/format";
 import { spendingTotals } from "@/lib/spending";
-import { useThemedStyles } from "@/theme/provider";
+import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 import type { Contribution } from "@/types/database";
 
@@ -19,6 +19,7 @@ type Section = { title: string; subtitle: string; data: ShoppingEntry[] };
 
 export default function ShoppingScreen() {
   const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const showToast = useToast();
   const router = useRouter();
   const [entries, setEntries] = useState<ShoppingEntry[]>([]);
@@ -26,6 +27,7 @@ export default function ShoppingScreen() {
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<"tobuy" | "purchased">("tobuy");
   const [sort, setSort] = useState<"group" | "name">("group");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -50,13 +52,17 @@ export default function ShoppingScreen() {
     }, [load]),
   );
 
-  const visible = useMemo(
-    () =>
-      entries.filter((e) =>
-        filter === "purchased" ? e.status === "purchased" : e.status !== "purchased",
-      ),
-    [entries, filter],
-  );
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return entries.filter(
+      (e) =>
+        (filter === "purchased" ? e.status === "purchased" : e.status !== "purchased") &&
+        (!q ||
+          e.title.toLowerCase().includes(q) ||
+          e.groupName.toLowerCase().includes(q) ||
+          e.listTitle.toLowerCase().includes(q)),
+    );
+  }, [entries, filter, search]);
 
   const sections = useMemo<Section[]>(() => {
     if (sort === "name") {
@@ -129,6 +135,20 @@ export default function ShoppingScreen() {
           ),
         }}
       />
+      {entries.length > 1 ? (
+        <View style={styles.searchWrap}>
+          <TextInput
+            style={styles.search}
+            placeholder="Search your shopping list…"
+            placeholderTextColor={colors.placeholder}
+            value={search}
+            onChangeText={setSearch}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            accessibilityLabel="Search your shopping list"
+          />
+        </View>
+      ) : null}
       <SectionList
         sections={sections}
         keyExtractor={(e) => e.claimId}
@@ -251,6 +271,16 @@ function ShoppingRow({
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
     content: { padding: 16, gap: 8 },
+    searchWrap: { paddingHorizontal: 16, paddingTop: 12 },
+    search: {
+      borderWidth: 1,
+      borderColor: c.inputBorder,
+      borderRadius: 12,
+      padding: 12,
+      fontSize: 16,
+      backgroundColor: c.inputBg,
+      color: c.inputText,
+    },
     headerLink: { color: c.headerTint, fontWeight: "700", fontSize: 15 },
     headerRight: { flexDirection: "row", gap: 16, alignItems: "center" },
     summaryCard: { padding: 16, marginBottom: 12, gap: 4 },
