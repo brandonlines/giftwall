@@ -19,3 +19,9 @@ export function captureError(error: unknown, context?: Record<string, unknown>) 
   if (!dsn) return;
   Sentry.captureException(error, context ? { extra: context } : undefined);
 }
+
+// Wraps the root component with Sentry's error boundary + navigation/perf
+// instrumentation. No-ops (returns the component unchanged) without a DSN.
+export function wrapApp<C>(Root: C): C {
+  return dsn ? (Sentry.wrap(Root as never) as C) : Root;
+}

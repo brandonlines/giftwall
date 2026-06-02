@@ -33,7 +33,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://dpbvpvrexnjgkspmbcjc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_A3WKvO0ueGCCLtea4HPTwQ_RA8XOlZq",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },

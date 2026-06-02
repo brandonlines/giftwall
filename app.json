@@ -24,9 +24,6 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.giftwall.app",
       "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ]
     },
@@ -60,7 +57,22 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "giftwall uses the camera to scan product barcodes."
+          "cameraPermission": "giftwall uses the camera to scan product barcodes.",
+          "recordAudioAndAndroidPermission": false
+        }
+      ],
+      [
+        "@howincodes/expo-dynamic-app-icon",
+        {
+          "signature": { "ios": "./assets/app-icons/signature.png", "android": { "foregroundImage": "./assets/app-icons/signature-foreground.png", "backgroundColor": "#1366D6" } },
+          "birthdayBash": { "ios": "./assets/app-icons/birthdayBash.png", "android": { "foregroundImage": "./assets/app-icons/birthdayBash-foreground.png", "backgroundColor": "#E35420" } },
+          "sweetBeginnings": { "ios": "./assets/app-icons/sweetBeginnings.png", "android": { "foregroundImage": "./assets/app-icons/sweetBeginnings-foreground.png", "backgroundColor": "#6E8A6E" } },
+          "modernRomance": { "ios": "./assets/app-icons/modernRomance.png", "android": { "foregroundImage": "./assets/app-icons/modernRomance-foreground.png", "backgroundColor": "#3A1320" } },
+          "winterFrost": { "ios": "./assets/app-icons/winterFrost.png", "android": { "foregroundImage": "./assets/app-icons/winterFrost-foreground.png", "backgroundColor": "#2B2D42" } },
+          "cabinCozy": { "ios": "./assets/app-icons/cabinCozy.png", "android": { "foregroundImage": "./assets/app-icons/cabinCozy-foreground.png", "backgroundColor": "#819970" } },
+          "firesideCozy": { "ios": "./assets/app-icons/firesideCozy.png", "android": { "foregroundImage": "./assets/app-icons/firesideCozy-foreground.png", "backgroundColor": "#A66F53" } },
+          "northernLights": { "ios": "./assets/app-icons/northernLights.png", "android": { "foregroundImage": "./assets/app-icons/northernLights-foreground.png", "backgroundColor": "#00796B" } },
+          "mountainChalet": { "ios": "./assets/app-icons/mountainChalet.png", "android": { "foregroundImage": "./assets/app-icons/mountainChalet-foreground.png", "backgroundColor": "#6D4C41" } }
         }
       ]
     ],
@@ -76,7 +88,7 @@
     },
     "owner": "blines",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "updates": {
       "url": "https://u.expo.dev/ed7a8fd2-4a86-440f-a34f-7eda9fb3eb6c"
