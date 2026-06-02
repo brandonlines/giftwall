@@ -74,7 +74,7 @@
     },
     "owner": "blines",
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "url": "https://u.expo.dev/ed7a8fd2-4a86-440f-a34f-7eda9fb3eb6c"
