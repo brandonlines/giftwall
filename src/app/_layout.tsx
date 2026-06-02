@@ -7,7 +7,6 @@ import * as Updates from "expo-updates";
 import { AuthProvider, useAuth } from "@/providers/auth";
 import { ThemeProvider, useTheme } from "@/theme/provider";
 import { ToastProvider } from "@/components/ui/toast";
-import { AppIconProvider } from "@/icon/provider";
 import { onboardingSeen } from "@/lib/onboarding";
 import { initMonitoring, wrapApp } from "@/lib/monitoring";
 
@@ -42,11 +41,9 @@ function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <ToastProvider>
-          <AppIconProvider>
-            <AuthProvider>
-              <RootNavigator />
-            </AuthProvider>
-          </AppIconProvider>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
