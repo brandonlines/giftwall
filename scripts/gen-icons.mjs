@@ -2,7 +2,7 @@
 // Tooling-only dependency — to regenerate:
 //   npm i -D @resvg/resvg-js && node scripts/gen-icons.mjs && npm rm @resvg/resvg-js
 import { Resvg } from "@resvg/resvg-js";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 
 const DIR = "assets/images";
 const WHITE = "#FFFFFF";
@@ -69,3 +69,39 @@ writeFileSync(`${DIR}/android-icon-background.png`, png(BG, 1024));
 writeFileSync(`${DIR}/android-icon-monochrome.png`, png(MONO, 1024));
 writeFileSync(`${DIR}/splash-icon.png`, png(MONO, 512));
 console.log("✓ generated icon.png, favicon.png, android-icon-*, splash-icon.png");
+
+// --- Alternate app icons: one per theme. White gift (reads on every palette),
+// the theme's "claim" pop as the ribbon, and a vibrant gradient from the theme's
+// primary. `signature` pins the original icon so it stays the default.
+function lighten(hex, t) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const m = (c) => Math.round(c + (255 - c) * t);
+  return "#" + [m(r), m(g), m(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+const THEME_ICONS = {
+  signature: { ribbon: "#FFC94D", gradTop: "#3DA5FF", gradBot: "#1366D6" },
+  birthdayBash: { ribbon: "#00E5E5", primary: "#E35420" },
+  sweetBeginnings: { ribbon: "#D9555A", primary: "#6E8A6E" },
+  modernRomance: { ribbon: "#D4AF37", primary: "#3A1320" },
+  winterFrost: { ribbon: "#EF233C", primary: "#2B2D42" },
+  cabinCozy: { ribbon: "#D87B57", primary: "#819970" },
+  firesideCozy: { ribbon: "#F2C572", primary: "#A66F53" }, // claim==primary, so a gold pop instead
+  northernLights: { ribbon: "#00E676", primary: "#00796B" },
+  mountainChalet: { ribbon: "#B5A642", primary: "#6D4C41" },
+};
+
+const ICONS_DIR = "assets/app-icons";
+mkdirSync(ICONS_DIR, { recursive: true });
+for (const [key, p] of Object.entries(THEME_ICONS)) {
+  const top = p.gradTop ?? lighten(p.primary, 0.34);
+  const bot = p.gradBot ?? p.primary;
+  const grad = `<defs><linearGradient id="g_${key}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs>`;
+  const icon = frame(
+    `${grad}<rect width="1024" height="1024" fill="url(#g_${key})"/>${CONFETTI}${gift(WHITE, p.ribbon)}`,
+  );
+  const fg = frame(gift(WHITE, p.ribbon)); // transparent Android adaptive foreground
+  writeFileSync(`${ICONS_DIR}/${key}.png`, png(icon, 1024));
+  writeFileSync(`${ICONS_DIR}/${key}-foreground.png`, png(fg, 1024));
+}
+console.log(`✓ generated ${Object.keys(THEME_ICONS).length} themed app icons → ${ICONS_DIR}/`);

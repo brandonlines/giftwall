@@ -7,8 +7,9 @@ import * as Updates from "expo-updates";
 import { AuthProvider, useAuth } from "@/providers/auth";
 import { ThemeProvider, useTheme } from "@/theme/provider";
 import { ToastProvider } from "@/components/ui/toast";
+import { AppIconProvider } from "@/icon/provider";
 import { onboardingSeen } from "@/lib/onboarding";
-import { initMonitoring } from "@/lib/monitoring";
+import { initMonitoring, wrapApp } from "@/lib/monitoring";
 
 // Start crash reporting before anything renders (no-ops without a DSN).
 initMonitoring();
@@ -32,7 +33,7 @@ async function applyPendingUpdate() {
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
   useEffect(() => {
     void applyPendingUpdate();
   }, []);
@@ -41,14 +42,19 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <ToastProvider>
-          <AuthProvider>
-            <RootNavigator />
-          </AuthProvider>
+          <AppIconProvider>
+            <AuthProvider>
+              <RootNavigator />
+            </AuthProvider>
+          </AppIconProvider>
         </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
+
+// Sentry error boundary + instrumentation around the whole app (no-op without DSN).
+export default wrapApp(RootLayout);
 
 function RootNavigator() {
   const { session, loading } = useAuth();
