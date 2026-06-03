@@ -60,6 +60,13 @@
           "cameraPermission": "giftwall uses the camera to scan product barcodes.",
           "recordAudioAndAndroidPermission": false
         }
+      ],
+      "./plugins/withSourceReactNativeCore",
+      [
+        "expo-build-properties",
+        {
+          "ios": { "buildReactNativeFromSource": true }
+        }
       ]
     ],
     "experiments": {
