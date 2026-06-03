@@ -33,6 +33,8 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://dpbvpvrexnjgkspmbcjc.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_A3WKvO0ueGCCLtea4HPTwQ_RA8XOlZq",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://ce5399c423a25c4a6278696954c37b87@o4511493166989312.ingest.de.sentry.io/4511497200205904",
+        "RCT_USE_PREBUILT_RNCORE": "0",
         "SENTRY_ALLOW_FAILURE": "true"
       }
     }
