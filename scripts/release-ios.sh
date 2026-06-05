@@ -35,6 +35,14 @@ step "[3/7] prebuild + pods (prebuilt RN core)"
 npx expo prebuild -p ios --clean --no-install || die "prebuild failed"
 pod install --project-directory=ios || die "pod install failed"
 
+step "[3b/7] embed EAS Update channel (local xcodebuild omits it, so future OTA can reach this build)"
+EXPO_PLIST="ios/giftwall/Supporting/Expo.plist"
+[ -f "$EXPO_PLIST" ] || EXPO_PLIST="$(find ios -name Expo.plist | head -1)"
+/usr/libexec/PlistBuddy -c "Delete :EXUpdatesRequestHeaders" "$EXPO_PLIST" 2>/dev/null || true
+/usr/libexec/PlistBuddy -c "Add :EXUpdatesRequestHeaders dict" "$EXPO_PLIST"
+/usr/libexec/PlistBuddy -c "Add :EXUpdatesRequestHeaders:expo-channel-name string production" "$EXPO_PLIST"
+echo ">>> embedded channel: $(/usr/libexec/PlistBuddy -c 'Print :EXUpdatesRequestHeaders:expo-channel-name' "$EXPO_PLIST")"
+
 step "[4/7] archive (App Store, automatic signing)"
 SENTRY_DISABLE_AUTO_UPLOAD=true caffeinate -ims xcodebuild \
   -workspace "$WS" -scheme giftwall -configuration Release \
