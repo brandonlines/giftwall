@@ -59,7 +59,18 @@ xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath /tmp/gw-dev \
   -exportOptionsPlist /tmp/gw-export-dev.plist -allowProvisioningUpdates || die "dev export failed"
 ( cd /tmp/gw-dev && unzip -oq giftwall.ipa )
 xcrun devicectl device install app --device "$DEVICE" /tmp/gw-dev/Payload/giftwall.app || die "install failed"
-xcrun devicectl device process launch --device "$DEVICE" "$BUNDLE" || die "launch failed"
+# Launch, retrying while the device is LOCKED — a locked screen is not a crash.
+launched=false
+for attempt in 1 2 3 4 5 6; do
+  out="$(xcrun devicectl device process launch --device "$DEVICE" "$BUNDLE" 2>&1)"
+  if echo "$out" | grep -q "Launched application"; then launched=true; break; fi
+  if echo "$out" | grep -qiE "locked|could not be, unlocked"; then
+    echo ">>> iPhone is LOCKED — please unlock it (attempt $attempt/6; retrying in 15s)"; sleep 15
+  else
+    echo "$out" | tail -4; die "launch failed (not a lock issue)"
+  fi
+done
+[ "$launched" = true ] || die "device stayed locked through all retries — unlock it and re-run"
 sleep 10
 xcrun devicectl device info processes --device "$DEVICE" 2>/dev/null \
   | grep -E "giftwall\.app/giftwall" | grep -v giftwall2 \
