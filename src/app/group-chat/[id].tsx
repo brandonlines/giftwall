@@ -14,9 +14,11 @@ import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { messagesRepo, type MessageEntry } from "@/data/repositories/messages";
 import { subscribeToGroupMessages } from "@/data/realtime";
 import { relativeTime } from "@/lib/format";
+import { moderateContent } from "@/lib/moderation";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 
@@ -24,6 +26,7 @@ export default function GroupChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const showToast = useToast();
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -103,7 +106,7 @@ export default function GroupChatScreen() {
                 <Text style={styles.author}>{item.authorName}</Text>
                 <View style={styles.headRight}>
                   <Text style={styles.time}>{relativeTime(item.created_at)}</Text>
-                  {item.isMine && (
+                  {item.isMine ? (
                     <Pressable
                       onPress={() => confirmRemove(item)}
                       hitSlop={8}
@@ -111,6 +114,27 @@ export default function GroupChatScreen() {
                       accessibilityLabel="Delete your message"
                     >
                       <Text style={styles.delete}>Delete</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() =>
+                        moderateContent({
+                          authorId: item.author_id,
+                          authorName: item.authorName,
+                          contentType: "message",
+                          contentId: item.id,
+                          groupId: id,
+                          onChanged: (m) => {
+                            showToast(m);
+                            void load();
+                          },
+                        })
+                      }
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Report or block ${item.authorName}`}
+                    >
+                      <Text style={styles.report}>Report</Text>
                     </Pressable>
                   )}
                 </View>
@@ -147,6 +171,7 @@ const makeStyles = (c: ThemeColors) =>
     author: { fontWeight: "700", color: c.text, fontSize: 14 },
     time: { color: c.textMuted, fontSize: 12 },
     delete: { color: c.danger, fontSize: 13, fontWeight: "600" },
+    report: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
     body: { color: c.text, fontSize: 15 },
     composer: {
       padding: 12,

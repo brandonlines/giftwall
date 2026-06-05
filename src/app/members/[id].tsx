@@ -1,13 +1,16 @@
 import { useCallback, useState } from "react";
-import { Alert, FlatList, Image, StyleSheet, Text, View } from "react-native";
+import { Alert, type AlertButton, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
+import { useToast } from "@/components/ui/toast";
 import { groupsRepo, type MemberWithProfile } from "@/data/repositories/groups";
+import { blocksRepo } from "@/data/repositories/blocks";
 import { occasionCountdown } from "@/lib/dates";
 import { useAuth } from "@/providers/auth";
 import { useThemedStyles } from "@/theme/provider";
+import type { MemberRole } from "@/types/database";
 import type { ThemeColors } from "@/theme/themes";
 
 export default function MembersScreen() {
@@ -15,6 +18,7 @@ export default function MembersScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const styles = useThemedStyles(makeStyles);
+  const showToast = useToast();
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
 
   const isAdmin = members.some(
@@ -31,10 +35,11 @@ export default function MembersScreen() {
 
   function manageMember(member: MemberWithProfile) {
     const name = member.displayName ?? "this member";
-    const makeAdminLabel = member.role === "admin" ? "Remove as admin" : "Make admin";
-    const nextRole = member.role === "admin" ? "member" : "admin";
-    Alert.alert(`Manage ${name}`, undefined, [
-      {
+    const buttons: AlertButton[] = [];
+    if (isAdmin) {
+      const makeAdminLabel = member.role === "admin" ? "Remove as admin" : "Make admin";
+      const nextRole: MemberRole = member.role === "admin" ? "member" : "admin";
+      buttons.push({
         text: makeAdminLabel,
         onPress: async () => {
           try {
@@ -44,8 +49,8 @@ export default function MembersScreen() {
             Alert.alert("Couldn't update role", String((e as Error).message));
           }
         },
-      },
-      {
+      });
+      buttons.push({
         text: "Remove from group",
         style: "destructive",
         onPress: async () => {
@@ -56,9 +61,28 @@ export default function MembersScreen() {
             Alert.alert("Couldn't remove member", String((e as Error).message));
           }
         },
+      });
+    }
+    // Any member can block any other — symmetric, enforced by RLS. You each stop
+    // seeing the other's comments and group messages. Unblock from Profile.
+    buttons.push({
+      text: "Block",
+      style: "destructive",
+      onPress: async () => {
+        try {
+          await blocksRepo.block(member.user_id);
+          showToast(`Blocked ${name} — you won't see their comments or messages.`, "success");
+        } catch (e) {
+          showToast(String((e as Error).message) || "Couldn't block", "error");
+        }
       },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    });
+    buttons.push({ text: "Cancel", style: "cancel" });
+    Alert.alert(
+      name,
+      isAdmin ? "Manage this member or block them." : "Block this member?",
+      buttons,
+    );
   }
 
   useFocusEffect(
@@ -94,16 +118,15 @@ export default function MembersScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
           const isMe = item.user_id === user?.id;
-          const canManage = isAdmin && !isMe;
           const displayName = (item.displayName ?? "Unnamed") + (isMe ? " (You)" : "");
           const birthdayLabel = item.birthday ? occasionCountdown(item.birthday, true) : null;
           return (
             <Card
               style={styles.row}
-              onPress={canManage ? () => manageMember(item) : undefined}
+              onPress={!isMe ? () => manageMember(item) : undefined}
               accessibilityLabel={
-                canManage
-                  ? `Manage ${displayName}${item.role === "admin" ? ", admin" : ""}`
+                !isMe
+                  ? `Manage or block ${displayName}${item.role === "admin" ? ", admin" : ""}`
                   : undefined
               }
             >
@@ -142,7 +165,7 @@ export default function MembersScreen() {
               {item.role === "admin" && (
                 <Text style={styles.adminTag} maxFontSizeMultiplier={1.4}>Admin</Text>
               )}
-              {canManage && (
+              {!isMe && (
                 <Text style={styles.manage} accessibilityElementsHidden importantForAccessibility="no">
                   ›
                 </Text>

@@ -14,8 +14,10 @@ import { Stack, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Card } from "@/components/ui/card";
 import { Screen } from "@/components/ui/screen";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { commentsRepo, type CommentEntry } from "@/data/repositories/comments";
 import { subscribeToComments } from "@/data/realtime";
+import { moderateContent } from "@/lib/moderation";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import type { ThemeColors } from "@/theme/themes";
 
@@ -23,6 +25,7 @@ export default function ItemCommentsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const styles = useThemedStyles(makeStyles);
+  const showToast = useToast();
   const [comments, setComments] = useState<CommentEntry[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -100,7 +103,7 @@ export default function ItemCommentsScreen() {
             <Card style={styles.comment}>
               <View style={styles.commentHead}>
                 <Text style={styles.author}>{item.authorName}</Text>
-                {item.isMine && (
+                {item.isMine ? (
                   <Pressable
                     onPress={() => confirmRemove(item)}
                     hitSlop={8}
@@ -108,6 +111,26 @@ export default function ItemCommentsScreen() {
                     accessibilityLabel="Delete your comment"
                   >
                     <Text style={styles.delete}>Delete</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() =>
+                      moderateContent({
+                        authorId: item.author_id,
+                        authorName: item.authorName,
+                        contentType: "comment",
+                        contentId: item.id,
+                        onChanged: (m) => {
+                          showToast(m);
+                          void load();
+                        },
+                      })
+                    }
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Report or block ${item.authorName}`}
+                  >
+                    <Text style={styles.report}>Report</Text>
                   </Pressable>
                 )}
               </View>
@@ -141,6 +164,7 @@ const makeStyles = (c: ThemeColors) =>
     commentHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     author: { fontWeight: "700", color: c.text, fontSize: 14 },
     delete: { color: c.danger, fontSize: 13, fontWeight: "600" },
+    report: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
     body: { color: c.text, fontSize: 15 },
     composer: {
       padding: 12,

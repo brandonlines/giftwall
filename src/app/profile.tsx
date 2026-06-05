@@ -24,6 +24,7 @@ import {
 } from "@/data/repositories/notifications";
 import { accountRepo } from "@/data/repositories/account";
 import { wishlistsRepo } from "@/data/repositories/wishlists";
+import { blocksRepo, type BlockedUser } from "@/data/repositories/blocks";
 import { isValidDateStr } from "@/lib/dates";
 import { profileShareMessage, profileUrl } from "@/lib/links";
 import { isValidUsername, normalizeUsername } from "@/lib/validation";
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   const [username, setUsername] = useState("");
   const [savedUsername, setSavedUsername] = useState("");
   const [myLists, setMyLists] = useState<Wishlist[]>([]);
+  const [blocked, setBlocked] = useState<BlockedUser[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,8 +60,13 @@ export default function ProfileScreen() {
   });
 
   useEffect(() => {
-    Promise.all([profileRepo.getMine(), notificationsRepo.getMine(), wishlistsRepo.mine()])
-      .then(([p, n, lists]) => {
+    Promise.all([
+      profileRepo.getMine(),
+      notificationsRepo.getMine(),
+      wishlistsRepo.mine(),
+      blocksRepo.listMine(),
+    ])
+      .then(([p, n, lists, blocks]) => {
         setName(p?.display_name ?? "");
         setAddress(p?.shipping_address ?? "");
         setBirthday(p?.birthday ?? "");
@@ -68,6 +75,7 @@ export default function ProfileScreen() {
         setAvatar(p?.avatar_url ?? null);
         setPrefs(n);
         setMyLists(lists);
+        setBlocked(blocks);
       })
       .catch((e) => Alert.alert("Couldn't load profile", String((e as Error).message)))
       .finally(() => setLoading(false));
@@ -80,6 +88,20 @@ export default function ProfileScreen() {
       Alert.alert("Couldn't save", String((e as Error).message));
       setPrefs((p) => ({ ...p, [key]: !value }));
     });
+  }
+
+  async function unblock(userId: string) {
+    setBlocked((prev) => prev.filter((b) => b.user_id !== userId)); // optimistic
+    try {
+      await blocksRepo.unblock(userId);
+    } catch (e) {
+      Alert.alert("Couldn't unblock", String((e as Error).message));
+      try {
+        setBlocked(await blocksRepo.listMine());
+      } catch {
+        /* leave optimistic state */
+      }
+    }
   }
 
   async function changePhoto() {
@@ -397,6 +419,32 @@ export default function ProfileScreen() {
           ))}
         </Card>
 
+        {blocked.length > 0 ? (
+          <>
+            <Text style={[styles.label, { marginTop: 32 }]}>Blocked users</Text>
+            <Text style={styles.hint}>
+              You don&apos;t see each other&apos;s comments or group messages. Unblock anytime.
+            </Text>
+            <Card style={styles.prefList}>
+              {blocked.map((b, i) => (
+                <View key={b.user_id} style={[styles.prefRow, i > 0 && styles.prefRowBorder]}>
+                  <Text style={styles.prefLabel} numberOfLines={1}>
+                    {b.displayName ?? "Blocked user"}
+                  </Text>
+                  <Pressable
+                    onPress={() => void unblock(b.user_id)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Unblock ${b.displayName ?? "user"}`}
+                  >
+                    <Text style={styles.unblock}>Unblock</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </Card>
+          </>
+        ) : null}
+
         <View style={styles.meta}>
           <Text style={styles.metaText}>Signed in as {user?.email}</Text>
         </View>
@@ -449,6 +497,7 @@ const makeStyles = (c: ThemeColors) =>
     avatarEmpty: { alignItems: "center", justifyContent: "center" },
     avatarEmptyText: { fontSize: 36 },
     changePhoto: { color: c.accent, fontWeight: "600", marginTop: 8 },
+    unblock: { color: c.accent, fontWeight: "700", fontSize: 14 },
     label: { fontSize: 16, fontWeight: "700", color: c.pageText },
     hint: { color: c.pageTextMuted, marginTop: 4, marginBottom: 12 },
     input: {

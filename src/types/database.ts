@@ -265,6 +265,33 @@ export interface Database {
         Update: { body?: string };
         Relationships: [];
       };
+      blocks: {
+        Row: { blocker_id: string; blocked_id: string; created_at: string };
+        Insert: { blocker_id: string; blocked_id: string };
+        Update: { blocker_id?: string; blocked_id?: string };
+        Relationships: [];
+      };
+      reports: {
+        Row: {
+          id: string;
+          reporter_id: string;
+          content_type: string;
+          content_id: string;
+          group_id: string | null;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reporter_id: string;
+          content_type: string;
+          content_id: string;
+          group_id?: string | null;
+          reason?: string | null;
+        };
+        Update: { reason?: string | null };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -311,3 +338,5 @@ export type Activity = T["activity"]["Row"];
 export type ItemComment = T["item_comments"]["Row"];
 export type ThankYou = T["thank_yous"]["Row"];
 export type GroupMessage = T["group_messages"]["Row"];
+export type Block = T["blocks"]["Row"];
+export type Report = T["reports"]["Row"];
