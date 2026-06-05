@@ -453,52 +453,7 @@ export default function ListScreen() {
         keyExtractor={(i) => i.id}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          !loaded ? (
-            <View style={{ gap: 12 }}>
-              {[0, 1, 2].map((k) => (
-                <SkeletonCard key={k} />
-              ))}
-            </View>
-          ) : q ? (
-            <EmptyState emoji="🔎" title="No matches" hint={`Nothing matches "${query.trim()}".`} />
-          ) : (
-            <EmptyState
-              emoji={isOwner ? "📝" : "🎁"}
-              title={isOwner ? "Your list is empty" : "Nothing here yet"}
-              hint={
-                isOwner
-                  ? "Add items below — paste a link or type them in."
-                  : "Check back once items are added."
-              }
-            />
-          )
-        }
-        renderItem={({ item, index }) => (
-          <ItemRow
-            item={item}
-            claims={claims[item.id]}
-            reservations={reservations[item.id]}
-            isOwner={isOwner}
-            currentUserId={userId}
-            onToggle={toggleClaim}
-            onTogglePurchased={togglePurchased}
-            onToggleReveal={toggleReveal}
-            onReserve={toggleReserve}
-            onEdit={openEditItem}
-            onDelete={confirmDelete}
-            onDiscuss={openDiscuss}
-            onChipIn={openChipIn}
-            onOpenUrl={openUrl}
-            onRefreshPrice={refreshPrice}
-            onMove={moveItem}
-            reorder={
-              isOwner && !q ? { up: index > 0, down: index < items.length - 1 } : null
-            }
-            priceChanged={priceChanged.has(item.id)}
-          />
-        )}
-        ListFooterComponent={
+        ListHeaderComponent={
           isOwner ? (
             <View style={styles.addBox}>
               {loaded && items.length === 0 && (
@@ -538,6 +493,57 @@ export default function ListScreen() {
                   await load();
                 }}
               />
+            </View>
+          ) : null
+        }
+        ListEmptyComponent={
+          !loaded ? (
+            <View style={{ gap: 12 }}>
+              {[0, 1, 2].map((k) => (
+                <SkeletonCard key={k} />
+              ))}
+            </View>
+          ) : q ? (
+            <EmptyState emoji="🔎" title="No matches" hint={`Nothing matches "${query.trim()}".`} />
+          ) : (
+            <EmptyState
+              emoji={isOwner ? "📝" : "🎁"}
+              title={isOwner ? "Your list is empty" : "Nothing here yet"}
+              hint={
+                isOwner
+                  ? "Add your first item at the top — paste a link or type it in."
+                  : "Check back once items are added."
+              }
+            />
+          )
+        }
+        renderItem={({ item, index }) => (
+          <ItemRow
+            item={item}
+            claims={claims[item.id]}
+            reservations={reservations[item.id]}
+            isOwner={isOwner}
+            currentUserId={userId}
+            onToggle={toggleClaim}
+            onTogglePurchased={togglePurchased}
+            onToggleReveal={toggleReveal}
+            onReserve={toggleReserve}
+            onEdit={openEditItem}
+            onDelete={confirmDelete}
+            onDiscuss={openDiscuss}
+            onChipIn={openChipIn}
+            onOpenUrl={openUrl}
+            onRefreshPrice={refreshPrice}
+            onMove={moveItem}
+            reorder={
+              isOwner && !q ? { up: index > 0, down: index < items.length - 1 } : null
+            }
+            priceChanged={priceChanged.has(item.id)}
+          />
+        )}
+        ListFooterComponent={
+          isOwner ? (
+            <View>
               <View style={styles.occasionWrap}>
                 <Text style={styles.sectionLabel}>Occasion date</Text>
                 <View style={styles.occasionRow}>
@@ -954,7 +960,7 @@ const makeStyles = (c: ThemeColors) =>
     reorderArrowOff: { color: c.border },
     editAction: { color: c.accent, fontWeight: "600" },
     deleteAction: { color: c.danger, fontWeight: "600" },
-    addBox: { marginTop: 24 },
+    addBox: { marginTop: 4, marginBottom: 8 },
     addHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     scanLink: { color: c.accent, fontWeight: "600", fontSize: 13, marginBottom: 8 },
     deleteListWrap: { marginTop: 24 },

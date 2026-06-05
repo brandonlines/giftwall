@@ -202,4 +202,14 @@ export const groupsRepo = {
       .eq("id", groupId);
     if (error) throw error;
   },
+
+  // Admin-only (enforced by the groups UPDATE policy): turn a group's gift
+  // exchange (Secret Santa) on or off by setting its event type.
+  async setEventType(groupId: string, eventType: EventType): Promise<void> {
+    const { error } = await supabase
+      .from("groups")
+      .update({ event_type: eventType })
+      .eq("id", groupId);
+    if (error) throw error;
+  },
 };

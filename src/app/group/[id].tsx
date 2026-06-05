@@ -105,6 +105,20 @@ export default function GroupScreen() {
     }
   }
 
+  // Turn this group's Secret Santa / gift exchange on or off (admin only).
+  async function setExchange(on: boolean) {
+    setSantaBusy(true);
+    try {
+      await groupsRepo.setEventType(id, on ? "secret_santa" : "general");
+      showToast(on ? "Gift exchange started 🎁" : "Gift exchange turned off", "success");
+      await load();
+    } catch (e) {
+      showToast(String((e as Error).message) || "Couldn't update", "error");
+    } finally {
+      setSantaBusy(false);
+    }
+  }
+
   function shareInvite() {
     if (!group) return;
     // Link carries this group's unique code, so it joins exactly this group.
@@ -328,12 +342,34 @@ export default function GroupScreen() {
                         onPress={() => router.push(`/santa-exclusions/${id}`)}
                         hitSlop={6}
                         accessibilityRole="button"
-                        accessibilityLabel="Manage Secret Santa exclusions"
+                        accessibilityLabel="Manage Secret Santa exclusions and budget"
                       >
-                        <Text style={styles.santaLink}>Manage exclusions →</Text>
+                        <Text style={styles.santaLink}>Manage exclusions & budget →</Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setExchange(false)}
+                        hitSlop={6}
+                        accessibilityRole="button"
+                        accessibilityLabel="Turn off the gift exchange"
+                      >
+                        <Text style={styles.santaOff}>Turn off gift exchange</Text>
                       </Pressable>
                     </>
                   ) : null}
+                </Card>
+              ) : isAdmin ? (
+                <Card style={styles.santaCard}>
+                  <Text style={styles.santaTitle} accessibilityRole="header">🎁 Gift exchange</Text>
+                  <Text style={styles.santaText}>
+                    Turn this group into a Secret Santa — everyone secretly draws one person to
+                    buy for. You can exclude pairs who shouldn&apos;t match and set a budget.
+                  </Text>
+                  <Button
+                    title="Start a gift exchange"
+                    variant="secondary"
+                    onPress={() => setExchange(true)}
+                    loading={santaBusy}
+                  />
                 </Card>
               ) : null}
             </View>
@@ -492,6 +528,13 @@ const makeStyles = (c: ThemeColors) =>
     santaText: { fontSize: 15, color: c.text, lineHeight: 21 },
     santaName: { fontWeight: "800", color: c.accent },
     santaLink: { color: c.accent, fontWeight: "700", textAlign: "center", paddingVertical: 4 },
+    santaOff: {
+      color: c.textMuted,
+      fontWeight: "600",
+      fontSize: 13,
+      textAlign: "center",
+      paddingVertical: 4,
+    },
     recurRow: { flexDirection: "row", gap: 10, alignItems: "center", marginBottom: 10 },
     recurLabel: { fontSize: 14, color: c.text, flex: 1 },
   });
