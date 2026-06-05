@@ -4,12 +4,12 @@
 // rate-limited to DAILY_CAP requests/day via the ai_requests table to keep LLM
 // cost bounded.
 //
-// Calls an LLM through the shared _shared/llm.ts client (OpenAI-compatible
-// /chat/completions; OpenRouter by default). With no key configured the function
-// returns 503 and the app shows a friendly "not set up yet" message, so nothing
-// breaks before it's wired.
+// Calls an LLM through the shared _shared/llm.ts client. Uses Google Gemini when
+// GEMINI_API_KEY is set, otherwise any OpenAI-compatible endpoint (OpenRouter).
+// With no key configured the function returns 503 and the app shows a friendly
+// "not set up yet" message, so nothing breaks before it's wired.
 //
-// Secrets:  OPENROUTER_API_KEY (or ANTHROPIC_API_KEY); LLM_MODEL / LLM_BASE_URL optional
+// Secrets:  GEMINI_API_KEY (preferred) or OPENROUTER_API_KEY; model via GEMINI_MODEL
 // Deploy:   npx supabase functions deploy gift-assistant
 
 import { createClient } from "jsr:@supabase/supabase-js@2";

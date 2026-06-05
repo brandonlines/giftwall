@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -23,6 +23,10 @@ export default function ScanScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Synchronous re-entry lock. expo-camera fires onBarcodeScanned every frame,
+  // and the `scanned` state guard commits too late to stop 2–3 scans slipping
+  // through first — each one inserting a duplicate item. A ref flips instantly.
+  const scanningRef = useRef(false);
 
   async function handleScan(data: string) {
     setBusy(true);
@@ -105,6 +109,8 @@ export default function ScanScreen() {
           scanned
             ? undefined
             : (result) => {
+                if (scanningRef.current) return;
+                scanningRef.current = true;
                 setScanned(true);
                 void handleScan(result.data);
               }

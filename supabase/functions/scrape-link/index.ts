@@ -323,6 +323,54 @@ function amazonPrice(html: string): { price: number | null; currency: string | n
   return { price: null, currency: null };
 }
 
+// Amazon has no og:image and its JSON-LD usually omits the product image (it's
+// injected client-side), so pull the main image straight from the image block
+// in the static HTML. Slashes are sometimes JSON- or unicode-escaped.
+function amazonImage(html: string): string | null {
+  const unescape = (s: string) => s.replace(/\\u002[fF]/g, "/").replace(/\\\//g, "/");
+  const pat = (re: RegExp): string | null => {
+    const m = html.match(re);
+    return m?.[1] ? unescape(m[1].trim()) : null;
+  };
+  return (
+    pat(/data-old-hires=["']([^"']+)["']/i) ?? // canonical full-res landing image
+    pat(/"hiRes"\s*:\s*"([^"]+)"/i) ?? // colorImages/ImageBlockATF JSON
+    pat(/"large"\s*:\s*"([^"]+)"/i) ?? // smaller variant fallback
+    pat(/id=["']landingImage["'][^>]*\ssrc=["']([^"']+)["']/i) // legacy layout
+  );
+}
+
+// Generic non-OG image sources some sites use instead of og:image.
+function linkRelImage(html: string): string | null {
+  const m =
+    html.match(/<link[^>]+rel=["']image_src["'][^>]*href=["']([^"']+)["']/i) ??
+    html.match(/<link[^>]+href=["']([^"']+)["'][^>]*rel=["']image_src["']/i);
+  return m ? decodeEntities(m[1].trim()) : null;
+}
+
+function itempropImage(html: string): string | null {
+  const m =
+    html.match(/itemprop=["']image["'][^>]*(?:content|src|href)=["']([^"']+)["']/i) ??
+    html.match(/(?:content|src|href)=["']([^"']+)["'][^>]*itemprop=["']image["']/i);
+  return m ? decodeEntities(m[1].trim()) : null;
+}
+
+// Last resort: modern sites preload their main (LCP) image — on a product page
+// that's almost always the product shot. <link rel="preload" as="image" href/imagesrcset>.
+function preloadImage(html: string): string | null {
+  for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+    const tag = m[0];
+    if (!/rel=["'][^"']*\bpreload\b[^"']*["']/i.test(tag)) continue;
+    if (!/\bas=["']image["']/i.test(tag)) continue;
+    const href = tag.match(/\bhref=["']([^"']+)["']/i)?.[1];
+    if (href) return decodeEntities(href.trim());
+    const srcset = tag.match(/\bimagesrcset=["']([^"']+)["']/i)?.[1];
+    const first = srcset?.split(",")[0]?.trim().split(/\s+/)[0];
+    if (first) return decodeEntities(first);
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -383,11 +431,31 @@ Deno.serve(async (req) => {
         // unparseable host — skip the Amazon path
       }
     }
-    // Image: OpenGraph first, then JSON-LD Product image, then Twitter card.
-    const image = absolutizeImage(
-      metaContent(html, "og:image") ?? ld.image ?? metaContent(html, "twitter:image"),
+    // Image: OpenGraph first, then JSON-LD Product image, Twitter card, and a
+    // couple of generic non-OG sources (link rel=image_src, itemprop=image) so
+    // sites without og:image still resolve. Amazon has NONE of these in static
+    // HTML, so fall back to its image block when the host is Amazon.
+    let image = absolutizeImage(
+      metaContent(html, "og:image") ??
+        metaContent(html, "og:image:secure_url") ??
+        metaContent(html, "og:image:url") ??
+        ld.image ??
+        metaContent(html, "twitter:image") ??
+        metaContent(html, "twitter:image:src") ??
+        linkRelImage(html) ??
+        itempropImage(html) ??
+        preloadImage(html),
       url,
     );
+    if (!image) {
+      try {
+        if (isAmazonHost(new URL(url).hostname)) {
+          image = absolutizeImage(amazonImage(html), url);
+        }
+      } catch {
+        // unparseable host — skip the Amazon image path
+      }
+    }
 
     return json({ title, image, price_cents, currency });
   } catch (e) {

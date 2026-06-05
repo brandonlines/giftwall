@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   Share,
@@ -31,11 +32,14 @@ import type { Wishlist } from "@/types/database";
 import { useAuth } from "@/providers/auth";
 import { useTheme, useThemedStyles } from "@/theme/provider";
 import { themeList, type ThemeColors } from "@/theme/themes";
+import { useAppIcon } from "@/icon/provider";
+import { ICON_PREVIEWS } from "@/icon/previews";
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { colors, theme, setTheme } = useTheme();
+  const { iconKey, setAppIcon } = useAppIcon();
   const styles = useThemedStyles(makeStyles);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -334,6 +338,43 @@ export default function ProfileScreen() {
           })}
         </View>
 
+        <Text style={[styles.label, { marginTop: 32 }]}>App icon</Text>
+        <Text style={styles.hint}>
+          {Platform.OS === "ios"
+            ? "Choose your home-screen icon — iOS shows a quick confirmation when it changes."
+            : "Choose your home-screen icon — on Android it updates after you leave the app."}
+        </Text>
+        <View style={styles.themeList}>
+          {themeList.map((t) => {
+            const selected = t.key === iconKey;
+            return (
+              <Card
+                key={t.key}
+                onPress={() => setAppIcon(t.key)}
+                style={[styles.themeRow, selected && styles.themeRowSelected]}
+                accessibilityLabel={`${t.name} app icon`}
+                accessibilityState={{ selected }}
+              >
+                <Image
+                  source={ICON_PREVIEWS[t.key]}
+                  style={styles.iconThumb}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+                <View style={styles.themeMeta}>
+                  <Text style={styles.themeName}>{t.name}</Text>
+                  <Text style={styles.themeDesc}>{t.description}</Text>
+                </View>
+                {selected && (
+                  <Text style={styles.check} accessibilityElementsHidden importantForAccessibility="no">
+                    ✓
+                  </Text>
+                )}
+              </Card>
+            );
+          })}
+        </View>
+
         <Text style={[styles.label, { marginTop: 32 }]}>Notifications</Text>
         <Text style={styles.hint}>Choose which push notifications you get.</Text>
         <Card style={styles.prefList}>
@@ -457,6 +498,7 @@ const makeStyles = (c: ThemeColors) =>
     prefRowBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border },
     prefLabel: { fontSize: 15, color: c.text, flex: 1 },
     themeList: { gap: 10 },
+    iconThumb: { width: 44, height: 44, borderRadius: 10 },
     themeRow: {
       flexDirection: "row",
       alignItems: "center",
