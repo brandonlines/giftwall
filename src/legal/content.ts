@@ -128,6 +128,19 @@ export const TERMS: LegalSection[] = [
     title: "Your content",
     body: [
       "You keep ownership of the content you add. You grant us a limited licence to store and display it to the group members who are entitled to see it, solely to operate the app.",
+      "Don't post abusive, harassing, or objectionable content. You can report content or block another member from the comment or chat where it appears, or from a group's member list; reports are reviewed and acted on promptly. We may remove content or suspend accounts that break these rules.",
+    ],
+  },
+  {
+    title: "AI suggestions",
+    body: [
+      "The optional Gift Assistant uses AI to suggest gift ideas from what you type. Suggestions may be inaccurate, unavailable, or unsuitable — treat them as ideas, not advice, and check details (including price and availability) before buying. You're responsible for what you enter; don't include anything you wouldn't want processed by a third-party AI service.",
+    ],
+  },
+  {
+    title: "Affiliate links",
+    body: [
+      "Some links to retailers (such as Amazon) may include an affiliate tag, and we may earn a commission on qualifying purchases at no extra cost to you. This never changes the price you pay or what we show you.",
     ],
   },
   {

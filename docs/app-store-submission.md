@@ -79,8 +79,10 @@ giftwall lets members post content others see (display names, item notes, commen
 3. a way to **block** abusive users,
 4. a published content/abuse policy.
 
-giftwall has (4) (Terms → Acceptable use) and admin **remove-member** + **leave-group** — but **(2) reporting and (3) blocking are CONFIRMED MISSING** (the only moderation tools in the code are admin "Remove from group" and "Leave group"; there is no Report action and no per-user Block). This is the single most likely rejection reason.
+**✅ RESOLVED (shipped — migration 0038 + PR #31).** giftwall now provides all four requirements:
+1. **Filter objectionable content** — Report → operator review/removal; authors delete their own content; admins remove members.
+2. **Report** — on others' comments and group-chat messages (the sheet also offers Block).
+3. **Block** — symmetric and RLS-enforced; from the report sheet, or **Group → members → Block**; unblock in **Profile → Blocked users**.
+4. **Published policy** — Terms → Acceptable use / Your content.
 
-Two paths:
-- **Recommended:** add a **Report** action (on comments, group messages, and items) that flags content for review within 24h, plus a **Block** that hides a blocked user's content from you. Then answer the UGC questions cleanly.
-- **Riskier:** submit as-is and argue in **App Review notes** that giftwall is **invite-only, private family/friend groups** (you only ever see content from people you invited — not open/public social), so the abuse surface is minimal. Some reviewers accept this for closed-group apps; many don't. Be ready for a rejection + fast resubmit.
+Reports are reviewed within 24h. Still worth doing: note the **invite-only, private-group** model in App Review notes (see `app-review-notes.md`) — it further lowers the abuse surface.
