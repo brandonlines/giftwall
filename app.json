@@ -133,8 +133,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true,
-      "baseUrl": "/giftwall"
+      "reactCompiler": true
     },
     "extra": {
       "router": {},

@@ -29,6 +29,9 @@ jobs:
       # variables > Actions > Variables).
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || 'https://dpbvpvrexnjgkspmbcjc.supabase.co' }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_A3WKvO0ueGCCLtea4HPTwQ_RA8XOlZq' }}
+      # Public web origin (the Pages custom domain). Makes invite links render as
+      # https://www.gift-well.ca/join/<CODE> in the web app.
+      EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL || 'https://www.gift-well.ca' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,9 +41,10 @@ jobs:
       - run: npm ci
       - name: Export web bundle
         run: npx expo export --platform web
-      - name: SPA fallback, disable Jekyll, copy static docs
+      - name: SPA fallback, custom domain, disable Jekyll, copy static docs
         run: |
           cp dist/index.html dist/404.html       # client-side routing for deep links
+          echo 'www.gift-well.ca' > dist/CNAME    # GitHub Pages custom domain
           touch dist/.nojekyll                    # keep Expo's _expo/ assets (Jekyll strips _dirs)
           cp docs/privacy.html dist/privacy.html
           cp docs/terms.html   dist/terms.html

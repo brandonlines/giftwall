@@ -66,14 +66,14 @@ buttons. This is the quickest way for anyone to see the look on their machine.
 
 ## Web app on GitHub Pages
 
-The same codebase ships as a public web app at
-**https://brandonlines.github.io/giftwall** (and from `gift-well.ca`, which
-redirects there). `.github/workflows/deploy-web.yml` runs `expo export
---platform web` and publishes `dist/` on every push to `main`. Email and Google
-sign-in work in the browser; **Sign in with Apple is native-iOS only** and is
-hidden on web. Native-only features (barcode scan, push, share-to-app) degrade
-gracefully. Full setup — Pages, Supabase redirect URLs, Google OAuth origins,
-and the `gift-well.ca` redirect — is in [docs/WEB-DEPLOY.md](docs/WEB-DEPLOY.md).
+The same codebase ships as a public web app at **https://www.gift-well.ca**
+(GitHub Pages with a custom domain). `.github/workflows/deploy-web.yml` runs
+`expo export --platform web` and publishes `dist/` on every push to `main`.
+Email and Google sign-in work in the browser; **Sign in with Apple is
+native-iOS only** and is hidden on web. Native-only features (barcode scan,
+push, share-to-app) degrade gracefully. Full setup — Pages, DNS, Supabase
+redirect URLs, and Google OAuth origins — is in
+[docs/WEB-DEPLOY.md](docs/WEB-DEPLOY.md).
 
 ## Run the full app on a phone
 
