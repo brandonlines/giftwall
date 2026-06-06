@@ -68,6 +68,19 @@ async function exchangeCodeFromUrl(url: string) {
 }
 
 export async function signInWithGoogle() {
+  // Web: there's no in-app browser. Do a normal full-page OAuth redirect and let
+  // supabase-js finish the PKCE exchange when Google sends us back — that's what
+  // `detectSessionInUrl` (enabled for web in lib/supabase.ts) is for.
+  if (Platform.OS === "web") {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: Linking.createURL("/") },
+    });
+    if (error) throw error;
+    return;
+  }
+
+  // Native: open the system browser and exchange the returned code ourselves.
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo, skipBrowserRedirect: true },

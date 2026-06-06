@@ -64,6 +64,17 @@ buttons. This is the quickest way for anyone to see the look on their machine.
 > because the app is client-only — Supabase auth needs browser storage, so the
 > static/SSR prerender mode doesn't apply.
 
+## Web app on GitHub Pages
+
+The same codebase ships as a public web app at
+**https://brandonlines.github.io/giftwall** (and from `gift-well.ca`, which
+redirects there). `.github/workflows/deploy-web.yml` runs `expo export
+--platform web` and publishes `dist/` on every push to `main`. Email and Google
+sign-in work in the browser; **Sign in with Apple is native-iOS only** and is
+hidden on web. Native-only features (barcode scan, push, share-to-app) degrade
+gracefully. Full setup — Pages, Supabase redirect URLs, Google OAuth origins,
+and the `gift-well.ca` redirect — is in [docs/WEB-DEPLOY.md](docs/WEB-DEPLOY.md).
+
 ## Run the full app on a phone
 
 1. Set up Supabase (below) and put real values in `.env`.

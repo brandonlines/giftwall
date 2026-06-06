@@ -1,0 +1,49 @@
+giftwall
+Copyright (c) 2026 giftwall — https://github.com/brandonlines/giftwall
+
+Licensed under the MIT License; see the LICENSE file for the full text.
+
+================================================================================
+Attributions
+================================================================================
+
+giftwall was bootstrapped with create-expo-app and is built on open-source
+software. Each dependency remains under its own license; the most significant
+are credited below. Installing dependencies materialises the full, authoritative
+license text for every package under node_modules/<package>/LICENSE.
+
+- Expo SDK & Expo Router — MIT License
+  Copyright (c) 2015-present 650 Industries, Inc. (aka Expo)
+  https://github.com/expo/expo
+
+- React & React DOM — MIT License
+  Copyright (c) Meta Platforms, Inc. and affiliates
+  https://github.com/facebook/react
+
+- React Native — MIT License
+  Copyright (c) Meta Platforms, Inc. and affiliates
+  https://github.com/facebook/react-native
+
+- react-native-web — MIT License
+  Copyright (c) Nicolas Gallagher
+  https://github.com/necolas/react-native-web
+
+- supabase-js — MIT License
+  Copyright (c) Supabase
+  https://github.com/supabase/supabase-js
+
+- react-native-reanimated, react-native-gesture-handler,
+  react-native-screens, react-native-safe-area-context, react-native-svg
+  — MIT License
+  Copyright (c) Software Mansion
+  https://github.com/software-mansion
+
+- Sentry React Native SDK (@sentry/react-native) — MIT License
+  Copyright (c) Functional Software, Inc. d/b/a Sentry
+  https://github.com/getsentry/sentry-react-native
+
+- react-native-qrcode-svg — MIT License
+  https://github.com/awesomejerry/react-native-qrcode-svg
+
+See package.json for the complete dependency list, each governed by its own
+license.

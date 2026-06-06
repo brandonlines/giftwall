@@ -1,0 +1,63 @@
+# Builds the Expo web bundle and publishes it to GitHub Pages.
+# In the public `giftwall` repo this serves https://brandonlines.github.io/giftwall.
+name: Deploy web to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least-privilege scopes the Pages deploy needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One publish at a time; never interrupt an in-flight deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Public, RLS-protected Supabase credentials. These are baked into the
+      # client bundle by design (the publishable / anon key is meant to ship —
+      # Row-Level Security, not key secrecy, protects data). Override per repo by
+      # adding Actions *variables* of the same name (Settings > Secrets and
+      # variables > Actions > Variables).
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || 'https://dpbvpvrexnjgkspmbcjc.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_A3WKvO0ueGCCLtea4HPTwQ_RA8XOlZq' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Export web bundle
+        run: npx expo export --platform web
+      - name: SPA fallback, disable Jekyll, copy static docs
+        run: |
+          cp dist/index.html dist/404.html       # client-side routing for deep links
+          touch dist/.nojekyll                    # keep Expo's _expo/ assets (Jekyll strips _dirs)
+          cp docs/privacy.html dist/privacy.html
+          cp docs/terms.html   dist/terms.html
+          cp docs/support.html dist/support.html
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

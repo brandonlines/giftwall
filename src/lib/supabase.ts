@@ -1,6 +1,6 @@
 import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "./env";
 import type { Database } from "../types/database";
@@ -13,9 +13,11 @@ export const supabase = createClient<Database>(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      // No URL-based session detection on native; OAuth/magic-link returns
-      // via deep link handled by expo-router.
-      detectSessionInUrl: false,
+      // Native returns OAuth / magic-link via a deep link handled by
+      // expo-router, so URL session detection stays off there. On web there is
+      // no deep link — the session comes back in the page URL (?code=… on the
+      // PKCE redirect), so supabase-js must parse it to finish sign-in.
+      detectSessionInUrl: Platform.OS === "web",
       // PKCE so the OAuth (Google) redirect returns a code we exchange manually.
       flowType: "pkce",
     },
