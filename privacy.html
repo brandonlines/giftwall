@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>giftwall — Privacy Policy</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; color: #1b1f24;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #14181d; color: #e6e8eb; } a { color: #6db0ff; } }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin-top: 32px; }
+  .updated { color: #6b7280; font-size: 14px; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  a { color: #1668c6; }
+  .wall { background: rgba(32,138,239,.08); border: 1px solid rgba(32,138,239,.25); border-radius: 12px; padding: 12px 16px; }
+</style>
+</head>
+<body>
+  <h1>🎁 giftwall — Privacy Policy</h1>
+  <p class="updated">Last updated: 2026-10-15</p>
+
+  <h2>What giftwall is</h2>
+  <p>giftwall is a shared gift-wishlist app for families and groups. Its defining
+  feature is the <strong>Surprise Wall</strong>: the owner of a wishlist can never
+  see who has claimed, reserved, contributed to, or purchased items on their own
+  list, so the surprise is preserved.</p>
+
+  <h2>Information we collect</h2>
+  <ul>
+    <li><strong>Account:</strong> your email address (for sign-in) and, if you use them, your Apple or Google sign-in identifiers. Sign in with Apple may share your name and email (you can choose to hide your email).</li>
+    <li><strong>Profile:</strong> a display name, plus — all optional — an avatar photo, a shipping address (shown only to people in your groups so they can send you gifts), a birthday (friendly reminders to your groups), and a public username if you claim one.</li>
+    <li><strong>Content you create:</strong> groups, wishlists and items (titles, links, prices, notes, quantities, photos), gift claims and purchase status, group-gift contributions, reservations, comments, reactions, group chat messages, thank-you notes, and Secret Santa selections.</li>
+    <li><strong>Public profile (optional):</strong> if you claim a username and mark a list public, that list and its items are viewable by anyone at gift-well.ca/u/your-username. Who claimed or is buying what is never shown publicly.</li>
+    <li><strong>Device:</strong> an Expo push-notification token and your device platform for the alerts you opt into.</li>
+    <li><strong>Links you paste:</strong> our server fetches the page to read its title, image and price.</li>
+    <li><strong>Barcodes you scan:</strong> the barcode number (nothing about you) is sent to product databases to look up the item — Open Library and Google Books for books; Open Food Facts, Open Products Facts and UPCitemdb for other products.</li>
+  </ul>
+
+  <h2>How the Surprise Wall protects you</h2>
+  <p class="wall">Claims, purchase status, reservations, group-gift contributions
+  and item discussion are enforced at the database level with Row-Level Security.
+  A list owner's requests for that data return nothing — over the API or live
+  updates — so the privacy is not a UI trick and cannot be bypassed by inspecting
+  network traffic. After an occasion, a gift is revealed only if both sides opt
+  in; Secret Santa draws show each person only the one name they drew.</p>
+
+  <h2>How we use your information</h2>
+  <p>To operate the app: show your groups and lists, coordinate gifts, and send
+  notifications you opt into (which can include
+  item names, member names, occasion reminders, and thank-you messages — each type
+  is toggleable). We do <strong>not</strong> sell your personal information and do
+  <strong>not</strong> use it for advertising or cross-app tracking. The app
+  contains no analytics or advertising SDKs.</p>
+
+  <h2>Affiliate links</h2>
+  <p>Some outbound Amazon product links may include an Amazon Associates tag. If
+  you buy through one, we may earn a small commission at no extra cost to you. This
+  never changes what you see, and we don't share your identity with Amazon to do
+  it.</p>
+
+  <h2>Service providers</h2>
+  <ul>
+    <li><strong>Supabase</strong> — database, authentication, file storage, real-time updates.</li>
+    <li><strong>Apple &amp; Google</strong> — Sign in with Apple and Google sign-in.</li>
+    <li><strong>Expo</strong> — push notifications (Expo Push Service) and over-the-air app updates.</li>
+    <li><strong>Sentry</strong> — crash/error diagnostics (personal-data collection disabled; reports may incidentally contain technical details).</li>
+    <li><strong>Open Library, Google Books, Open Food Facts, Open Products Facts and UPCitemdb</strong> — resolve scanned barcodes to product names/images. Each receives only the barcode number (and, like any website, your device's IP address).</li>
+    <li><strong>Retailers</strong> — when you paste or open a product link, a request is made to that retailer's site.</li>
+  </ul>
+
+  <h2>Where your data is processed</h2>
+  <p>Your data is stored and processed by the providers above, whose servers may be
+  located in the United States, the European Union, or other regions. By using
+  giftwall you understand your information may be processed outside your country.</p>
+
+  <h2>Your rights</h2>
+  <ul>
+    <li><strong>Export:</strong> Profile → Your data → Export my data (a JSON copy of your profile, groups, lists, items, claims and comments).</li>
+    <li><strong>Deletion:</strong> Profile → Your data → Delete account — permanent and irreversible; deletes your account and the data tied to it.</li>
+    <li>Depending on where you live, you may have additional rights to access, correct, or restrict use of your data.</li>
+    <li><strong>Questions or requests:</strong> <a href="mailto:support@gift-well.ca">support@gift-well.ca</a>.</li>
+  </ul>
+
+  <h2>Security</h2>
+  <p>Every table is protected by Row-Level Security, so you can only read data
+  you're entitled to. Sign-in uses Apple, Google, or a one-time email code, and the
+  server keys that could bypass these rules are never shipped inside the app.</p>
+
+  <h2>Children</h2>
+  <p>giftwall is intended for general/family audiences and is not directed to
+  children under 13. Please don't create an account for a child under 13.</p>
+
+  <h2>Changes</h2>
+  <p>We'll update this policy as the app evolves and revise the date above.
+  Material changes will be surfaced in-app.</p>
+</body>
+</html>
